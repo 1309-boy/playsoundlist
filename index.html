@@ -18,15 +18,41 @@ button { margin-left:.3em; padding:.3em .6em; border:none; border-radius:6px;
 #debug { font-size:12px; color:#666; white-space:pre-wrap; margin-top:1em; }
 </style>
 </head>
-<body>
-<h1>Bedrock Playsound 리스트 <span id="decoder-status" style="font-size:.8em;color:#666;"></span></h1>
-<p style="font-size:.8em;color:#888;">FSB를 클라이언트에서 디코딩(옵션).</p>
 
-<input type="text" id="search" class="search" placeholder="검색: ui.loom / zombie / ambient …" oninput="renderList()">
-<button onclick="loadManifest()">manifest 다시 불러오기</button>
-<div id="pagination" class="pagination"></div>
-<div id="list"></div>
-<pre id="debug"></pre>
+<body>
+  <div style="max-width: 980px; margin: 16px auto; padding: 8px;">
+    <h1 style="font-size:20px; margin:0 0 8px;">
+      Bedrock Playsound 리스트
+      <small id="decoder-status" style="font-weight:normal; font-size:12px; color:#666; margin-left:8px;">Decoder: loading…</small>
+    </h1>
+
+    <!-- 검색 -->
+    <div style="display:flex; gap:8px; align-items:center; margin:10px 0;">
+      <input id="search" type="text" placeholder="검색: ui.loom / zombie / ambient …"
+             oninput="renderList()"
+             style="flex:1; padding:8px 10px; border:1px solid #ccc; border-radius:6px;">
+      <button onclick="loadManifest(true)"
+              style="padding:8px 10px; border:1px solid #ddd; border-radius:6px; background:#f7f7f7;">
+        manifest 다시 불러오기
+      </button>
+    </div>
+
+    <!-- 페이지 정보 / 버튼 -->
+    <div id="pagination" style="margin:8px 0; font-size:13px;">
+      <!-- JS가 채움 -->
+    </div>
+
+    <!-- 목록이 그려질 자리 -->
+    <div id="list" style="display:flex; flex-direction:column; gap:10px;">
+      <!-- JS가 채움 -->
+    </div>
+
+    <!-- 디버그 로그 보기용 -->
+    <details style="margin-top:14px;">
+      <summary style="cursor:pointer;">디버그</summary>
+      <pre id="debug" style="background:#f6f6f6; padding:10px; border:1px solid #eee; border-radius:6px; white-space:pre-wrap;"></pre>
+    </details>
+  </div>
 
 <script>
 const MANIFEST_URL = '/playsoundlist/sounds_flat/manifest.json';
@@ -71,8 +97,6 @@ function renderList() {
   const pagEl  = document.getElementById('pagination');
   try {
     const searchVal = (document.getElementById('search').value || '').toLowerCase();
-
-    // 필터
     const filtered = manifestEntries.filter(e => (e.label || '').toLowerCase().includes(searchVal));
     const total = filtered.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -82,17 +106,14 @@ function renderList() {
     const end = Math.min(start + pageSize, total);
     const pageEntries = filtered.slice(start, end);
 
-    // 디버그 로그
     logDebug(`renderList: total=${total}, page=${currentPage}/${totalPages}, slice=[${start}, ${end})`);
 
-    // 렌더
     if (pageEntries.length === 0) {
       listEl.innerHTML = '<div style="color:#666;">표시할 항목이 없습니다.</div>';
     } else {
       listEl.innerHTML = pageEntries.map(e => {
         const label = (e.label || '').replace(/^minecraft:/,'');
         const url   = e.url || '';
-        // url이 없으면 표시만 하고 재생 비활성
         const audioId = 'audio-' + label.replace(/[^\w.-]+/g,'_');
         return `
           <div class="sound-item">
@@ -107,7 +128,6 @@ function renderList() {
     pagEl.innerHTML =
       `<span>총 ${total}개 · ${totalPages}페이지 (${total ? (start+1) : 0}–${end})</span><br>` +
       `<button onclick="prevPage()">&lt; 이전</button><button onclick="nextPage()">다음 &gt;</button>`;
-
   } catch (err) {
     const msg = (err && err.message) ? err.message : String(err);
     logDebug('renderList 에러:', msg);
@@ -136,10 +156,7 @@ function copyCommand(label) {
 }
 
 function prevPage() { currentPage = Math.max(1, currentPage - 1); renderList(); }
-function nextPage() {
-  const total = (document.getElementById('list').children || []).length; // 표시용이지만 괜찮음
-  currentPage += 1; renderList();
-}
+function nextPage() { currentPage += 1; renderList(); }
 
 window.addEventListener('load', () => {
   document.getElementById('decoder-status').textContent = 'Decoder: loaded';
