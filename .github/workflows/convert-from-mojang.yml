@@ -1,6 +1,8 @@
 name: Convert Mojang Samples (FSB -> WAV)
 on:
-  workflow_dispatch: {}   # 수동 실행
+  workflow_dispatch:
+  push:
+    branches: [ main ]   # 커밋하면 자동 실행도 되게 함
 
 permissions:
   contents: write
@@ -8,6 +10,7 @@ permissions:
 jobs:
   convert:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout this repo
         uses: actions/checkout@v4
@@ -25,14 +28,14 @@ jobs:
           sudo apt-get install -y build-essential pkg-config git \
             libmpg123-dev libvorbis-dev libogg-dev libopusfile-dev \
             libavcodec-dev libavformat-dev libavutil-dev libswresample-dev \
-            jq python3
+            jq python3 ffmpeg
 
       - name: Build vgmstream (CLI)
         run: |
           set -e
           git clone --depth=1 https://github.com/vgmstream/vgmstream.git
           cd vgmstream
-          make -j$(nproc) CFLAGS="-O2"
+          make -j"$(nproc)" CFLAGS="-O2"
           cp vgmstream-cli ../vgmstream-cli
           cd ..
           ./vgmstream-cli -h || true
@@ -42,29 +45,29 @@ jobs:
           set -e
           mkdir -p out
           find mojang_sounds -type f -name '*.fsb' -print0 | while IFS= read -r -d '' f; do
-            rel="${f#mojang_sounds/}"     # 예: ui/loom/take_result1.fsb
-            noext="${rel%.fsb}"           # ui/loom/take_result1
-            base="${noext//\//.}"         # ui.loom.take_result1
+            rel="${f#mojang_sounds/}"       # ui/loom/take_result1.fsb
+            noext="${rel%.fsb}"             # ui/loom/take_result1
+            base="${noext//\//.}"           # ui.loom.take_result1
             ./vgmstream-cli -D "$f" -o "out/${base}.wav" >/dev/null || true
           done
+          ls -l out | head || true
           if ! ls out/*.wav >/dev/null 2>&1; then
             echo "No WAVs produced." >&2
             exit 1
           fi
 
       - name: Create manifest.json (minecraft:<id>)
+        shell: python
         run: |
-          python3 - <<'PY'
-import os, json
-items=[]
-for fn in sorted(os.listdir('out')):
-    if not fn.lower().endswith(('.wav','.ogg')): continue
-    base, ext = os.path.splitext(fn)
-    items.append({"id": f"minecraft:{base}", "label": base, "url": f"./{fn}"})
-with open('out/manifest.json','w',encoding='utf-8') as f:
-    json.dump(items, f, ensure_ascii=False, indent=2)
-print("Wrote out/manifest.json with", len(items), "entries")
-PY
+          import os, json
+          items = []
+          for fn in sorted(os.listdir('out')):
+              if not fn.lower().endswith(('.wav','.ogg')): continue
+              base, ext = os.path.splitext(fn)
+              items.append({"id": f"minecraft:{base}", "label": base, "url": f"./{fn}"})
+          with open('out/manifest.json','w',encoding='utf-8') as f:
+              json.dump(items, f, ensure_ascii=False, indent=2)
+          print("Wrote out/manifest.json with", len(items), "entries")
 
       - name: Commit to repo (sounds_flat/)
         run: |
