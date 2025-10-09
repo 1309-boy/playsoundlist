@@ -29,83 +29,117 @@ button { margin-left:.3em; padding:.3em .6em; border:none; border-radius:6px;
 <pre id="debug"></pre>
 
 <script>
-const MANIFEST_URL = '/playsoundlist/sounds_flat/manifest.json'; // 절대경로로 고정
+const MANIFEST_URL = '/playsoundlist/sounds_flat/manifest.json';
 let manifestEntries = [];
 let currentPage = 1;
 const pageSize = 100;
+
+function logDebug(msg, extra) {
+  const dbg = document.getElementById('debug');
+  try {
+    dbg.textContent += (dbg.textContent ? '\n' : '') + msg + (extra ? ' ' + JSON.stringify(extra) : '');
+  } catch { dbg.textContent += '\n' + msg; }
+}
 
 async function loadManifest(showAlert = true) {
   const dbg = document.getElementById('debug');
   dbg.textContent = 'Manifest 로드 중...';
   try {
-    const url = MANIFEST_URL + '?v=' + Date.now(); // 캐시 회피
+    const url = MANIFEST_URL + '?v=' + Date.now();
     const res = await fetch(url, { cache: 'no-store' });
-
     if (!res.ok) {
       const msg = `HTTP ${res.status} ${res.statusText} — ${url}`;
       dbg.textContent = 'Manifest fetch 실패: ' + msg;
       if (showAlert) alert('manifest 로드 실패\n' + msg);
       return;
     }
-
     const text = await res.text();
-    try {
-      const json = JSON.parse(text);
-      manifestEntries = json.entries || [];
-      dbg.textContent = `Manifest loaded: ${manifestEntries.length}개 항목`;
-      renderList();
-    } catch (e) {
-      dbg.textContent = 'JSON parse 실패: ' + (e.message || e);
-      if (showAlert) alert('manifest 로드 실패 (JSON parse)');
-    }
+    const json = JSON.parse(text);
+    manifestEntries = json.entries || [];
+    dbg.textContent = `Manifest loaded: ${manifestEntries.length}개 항목`;
+    currentPage = 1;
+    renderList();
   } catch (e) {
-    const msg = (e.message || e);
-    document.getElementById('debug').textContent = 'Fetch 에러: ' + msg;
+    const msg = (e && e.message) ? e.message : String(e);
+    document.getElementById('debug').textContent = 'Manifest 처리 에러: ' + msg;
     if (showAlert) alert('manifest 로드 실패\n' + msg);
   }
 }
 
 function renderList() {
-  const list = document.getElementById('list');
-  const searchVal = document.getElementById('search').value.toLowerCase();
-  let filtered = manifestEntries.filter(e => e.label.toLowerCase().includes(searchVal));
+  const listEl = document.getElementById('list');
+  const pagEl  = document.getElementById('pagination');
+  try {
+    const searchVal = (document.getElementById('search').value || '').toLowerCase();
 
-  const totalPages = Math.ceil(filtered.length / pageSize);
-  if (currentPage > totalPages) currentPage = totalPages || 1;
+    // 필터
+    const filtered = manifestEntries.filter(e => (e.label || '').toLowerCase().includes(searchVal));
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
 
-  const start = (currentPage - 1) * pageSize;
-  const end = start + pageSize;
-  const pageEntries = filtered.slice(start, end);
+    const start = (currentPage - 1) * pageSize;
+    const end = Math.min(start + pageSize, total);
+    const pageEntries = filtered.slice(start, end);
 
-  list.innerHTML = pageEntries.map(e => `
-    <div class="sound-item">
-      <strong>${e.label.replace(/^minecraft:/, '')}</strong>
-      <audio id="audio-${e.label}" src="${e.url}" preload="none"></audio>
-      <button onclick="playSound('${e.label}')">▶ Play</button>
-      <button onclick="copyCommand('${e.label}')">Copy /playsound</button>
-    </div>
-  `).join('');
+    // 디버그 로그
+    logDebug(`renderList: total=${total}, page=${currentPage}/${totalPages}, slice=[${start}, ${end})`);
 
-  document.getElementById('pagination').innerHTML =
-    `<span>총 ${filtered.length}개 · ${totalPages}페이지 (${start+1}–${Math.min(end, filtered.length)})</span><br>` +
-    `<button onclick="prevPage()">&lt; 이전</button><button onclick="nextPage()">다음 &gt;</button>`;
+    // 렌더
+    if (pageEntries.length === 0) {
+      listEl.innerHTML = '<div style="color:#666;">표시할 항목이 없습니다.</div>';
+    } else {
+      listEl.innerHTML = pageEntries.map(e => {
+        const label = (e.label || '').replace(/^minecraft:/,'');
+        const url   = e.url || '';
+        // url이 없으면 표시만 하고 재생 비활성
+        const audioId = 'audio-' + label.replace(/[^\w.-]+/g,'_');
+        return `
+          <div class="sound-item">
+            <strong>${label}</strong>
+            <audio id="${audioId}" src="${url}" preload="none"></audio>
+            <button onclick="playSoundById('${audioId}', '${label}')">▶ Play</button>
+            <button onclick="copyCommand('${label}')">Copy /playsound</button>
+          </div>`;
+      }).join('');
+    }
+
+    pagEl.innerHTML =
+      `<span>총 ${total}개 · ${totalPages}페이지 (${total ? (start+1) : 0}–${end})</span><br>` +
+      `<button onclick="prevPage()">&lt; 이전</button><button onclick="nextPage()">다음 &gt;</button>`;
+
+  } catch (err) {
+    const msg = (err && err.message) ? err.message : String(err);
+    logDebug('renderList 에러:', msg);
+    document.getElementById('list').innerHTML =
+      `<div style="color:#c00;">렌더링 중 오류가 발생했습니다: ${msg}</div>`;
+  }
 }
 
-function playSound(id) {
-  const audio = document.getElementById('audio-' + id);
-  if (!audio) return;
-  audio.currentTime = 0;
-  audio.play().catch(err => alert('재생 실패: ' + err.message));
+function playSoundById(audioId, label) {
+  try {
+    const audio = document.getElementById(audioId);
+    if (!audio) { alert('오디오 요소를 찾을 수 없어요: ' + label); return; }
+    if (!audio.src) { alert('파일 URL이 비어있어요: ' + label); return; }
+    audio.currentTime = 0;
+    audio.play().catch(err => alert('재생 실패: ' + (err.message || err)));
+  } catch (e) {
+    alert('재생 오류: ' + (e.message || e));
+  }
 }
 
-function copyCommand(id) {
-  const cmd = `/playsound ${id.replace(/^minecraft:/, '')}`;
-  navigator.clipboard.writeText(cmd);
+function copyCommand(label) {
+  const id = label.replace(/^minecraft:/,'');
+  const cmd = `/playsound ${id}`;
+  navigator.clipboard?.writeText(cmd);
   alert('복사됨: ' + cmd);
 }
 
-function prevPage() { if (currentPage > 1) { currentPage--; renderList(); } }
-function nextPage() { const max = Math.ceil(manifestEntries.length / pageSize); if (currentPage < max) { currentPage++; renderList(); } }
+function prevPage() { currentPage = Math.max(1, currentPage - 1); renderList(); }
+function nextPage() {
+  const total = (document.getElementById('list').children || []).length; // 표시용이지만 괜찮음
+  currentPage += 1; renderList();
+}
 
 window.addEventListener('load', () => {
   document.getElementById('decoder-status').textContent = 'Decoder: loaded';
