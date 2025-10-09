@@ -1,79 +1,100 @@
 // libs/fsb-decoder.js
-// Heuristic FSB extractor: finds embedded OGG / WAV / FLAC / MP3 and decodes it.
-export async function decodeFsbToAudioBuffer(audioContext, arrayBuffer) {
-  const buf = new Uint8Array(arrayBuffer);
+// Heuristic FSB extractor: try to find an embedded OGG / WAV(RIFF) / FLAC / MP3
+// and decode it to an AudioBuffer via WebAudio's decodeAudioData.
+// 이 코드는 모든 FSB를 100% 지원하진 않지만, OGG/MP3/FLAC/RIFF가 내장된 다수 샘플을 재생할 수 있습니다.
 
-  // helper: find first occurrence of byte pattern
-  function findBytes(needle) {
-    outer: for (let i = 0; i <= buf.length - needle.length; i++) {
+export async function decodeFsbToAudioBuffer(audioContext, arrayBuffer) {
+  const u8 = new Uint8Array(arrayBuffer);
+  const enc = (s) => new TextEncoder().encode(s);
+
+  // ---- helpers -------------------------------------------------
+  const sigs = {
+    OGG: enc("OggS"),
+    RIFF: enc("RIFF"),
+    WAVE: enc("WAVE"),
+    FLAC: enc("fLaC"),
+    ID3: enc("ID3"),
+  };
+
+  function indexOf(hay, needle, from = 0) {
+    outer: for (let i = from; i <= hay.length - needle.length; i++) {
       for (let j = 0; j < needle.length; j++) {
-        if (buf[i + j] !== needle[j]) continue outer;
+        if (hay[i + j] !== needle[j]) continue outer;
       }
       return i;
     }
     return -1;
   }
 
-  function enc(str) {
-    return new TextEncoder().encode(str);
-  }
-
-  // 1) OGG
-  let start = findBytes(enc("OggS"));
-  if (start >= 0) {
-    const slice = arrayBuffer.slice(start); // until EOF
-    return decodeAudioDataP(audioContext, slice, "audio/ogg");
-  }
-
-  // 2) WAV (RIFF…WAVE)
-  start = findBytes(enc("RIFF"));
-  if (start >= 0) {
-    // sanity: must also contain "WAVE" shortly after
-    const waveAt = findBytes(enc("WAVE"));
-    if (waveAt >= 0 && waveAt > start && waveAt - start < 128) {
-      const slice = arrayBuffer.slice(start);
-      return decodeAudioDataP(audioContext, slice, "audio/wav");
+  function sliceToNextHeader(startIdx) {
+    // 다음 오디오 헤더 위치까지 자름(없으면 끝까지)
+    const candidates = [
+      sigs.OGG, sigs.RIFF, sigs.FLAC, sigs.ID3,
+      // MP3 프레임 헤더는 바이트 패턴으로만 찾음: 0xFFEx/0xFFFB 등
+    ];
+    let next = u8.length;
+    for (const pat of candidates) {
+      const pos = indexOf(u8, pat, startIdx + 4);
+      if (pos !== -1) next = Math.min(next, pos);
     }
-  }
-
-  // 3) FLAC
-  start = findBytes(enc("fLaC"));
-  if (start >= 0) {
-    const slice = arrayBuffer.slice(start);
-    return decodeAudioDataP(audioContext, slice, "audio/flac");
-  }
-
-  // 4) MP3 frame sync (very heuristic)
-  start = -1;
-  for (let i = 0; i < buf.length - 1; i++) {
-    // 0xFFEx or 0xFFFB-ish
-    if (buf[i] === 0xff && (buf[i + 1] & 0xe0) === 0xe0) {
-      start = i;
-      break;
-    }
-  }
-  if (start >= 0) {
-    const slice = arrayBuffer.slice(start);
-    return decodeAudioDataP(audioContext, slice, "audio/mpeg");
-  }
-
-  // Nothing found
-  throw new Error("Unsupported FSB contents (no embedded OGG/WAV/FLAC/MP3 found).");
-}
-
-function decodeAudioDataP(ctx, arrBuf /*, mimeHint */) {
-  // Safari 호환 Promise 래퍼
-  return new Promise((resolve, reject) => {
-    try {
-      // modern browsers
-      const p = ctx.decodeAudioData(arrBuf, resolve, reject);
-      // Chrome returns a promise when callbacks omitted (but we passed callbacks).
-      // This keeps it compatible across browsers.
-      if (p && typeof p.then === "function") {
-        p.then(resolve, reject);
+    // MP3 프레임 헤더 대충 탐색
+    for (let i = startIdx + 2; i < u8.length - 1; i++) {
+      if (u8[i] === 0xff && (u8[i + 1] & 0xe0) === 0xe0) {
+        next = Math.min(next, i);
+        break;
       }
-    } catch (e) {
-      reject(e);
     }
-  });
+    return arrayBuffer.slice(startIdx, next);
+  }
+
+  function decodeAudioDataP(ctx, buf) {
+    return new Promise((resolve, reject) => {
+      try {
+        // callbacks + promise 모두 대응
+        const p = ctx.decodeAudioData(buf, resolve, reject);
+        if (p && typeof p.then === "function") p.then(resolve, reject);
+      } catch (e) { reject(e); }
+    });
+  }
+
+  // ---- 1) OGG --------------------------------------------------
+  let off = indexOf(u8, sigs.OGG);
+  if (off >= 0) {
+    const chunk = sliceToNextHeader(off);
+    try { return await decodeAudioDataP(audioContext, chunk); } catch {}
+  }
+
+  // ---- 2) WAV (RIFF..WAVE) ------------------------------------
+  off = indexOf(u8, sigs.RIFF);
+  if (off >= 0) {
+    const waveAt = indexOf(u8, sigs.WAVE, off + 4);
+    if (waveAt > off && waveAt - off < 128) {
+      const chunk = sliceToNextHeader(off);
+      try { return await decodeAudioDataP(audioContext, chunk); } catch {}
+    }
+  }
+
+  // ---- 3) FLAC -------------------------------------------------
+  off = indexOf(u8, sigs.FLAC);
+  if (off >= 0) {
+    const chunk = sliceToNextHeader(off);
+    try { return await decodeAudioDataP(audioContext, chunk); } catch {}
+  }
+
+  // ---- 4) MP3 (frame sync) ------------------------------------
+  let mp3Start = -1;
+  for (let i = 0; i < u8.length - 1; i++) {
+    if (u8[i] === 0xff && (u8[i + 1] & 0xe0) === 0xe0) { mp3Start = i; break; }
+  }
+  if (mp3Start >= 0) {
+    const chunk = sliceToNextHeader(mp3Start);
+    try { return await decodeAudioDataP(audioContext, chunk); } catch {}
+  }
+
+  // ---- 실패: 안내 메시지 ---------------------------------------
+  throw new Error(
+    "Unsupported FSB contents: couldn't find embedded OGG/WAV/FLAC/MP3.\n" +
+    "일부 FSB는 XMA/ADPCM 등 브라우저 미지원 코덱을 사용합니다. " +
+    "이 경우 서버/액션에서 WAV로 변환해 올려야 재생됩니다."
+  );
 }
