@@ -1,0 +1,122 @@
+name: Convert Mojang FSB to OGG and make manifest
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Fetch Mojang bedrock-samples (sounds/)
+        run: |
+          set -e
+          git clone --depth=1 https://github.com/Mojang/bedrock-samples.git
+          mkdir -p mojang_sounds
+          cp -a bedrock-samples/resource_pack/sounds/. mojang_sounds/
+          echo "Sample of fetched files:"
+          find mojang_sounds -type f -name '*.fsb' | head
+
+      - name: Install tools (jq, ffmpeg, unzip, curl)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq ffmpeg unzip curl
+
+      - name: Download vgmstream CLI (prebuilt linux)
+        run: |
+          set -e
+          api="https://api.github.com/repos/vgmstream/vgmstream/releases/latest"
+          url=$(curl -fsSL "$api" | jq -r '.assets[] | select(.name|test("linux.*cli.*zip$")) | .browser_download_url' | head -n1)
+          [ -z "$url" ] && { echo "vgmstream linux CLI asset not found"; exit 1; }
+          echo "Downloading: $url"
+          curl -L "$url" -o vgmcli.zip
+          unzip -q vgmcli.zip -d vgmcli
+
+          # vgmstream-cli 위치 찾아 심볼릭 링크 생성
+          if [ -f "$PWD/vgmcli/bin/vgmstream-cli" ]; then
+            ln -s "$PWD/vgmcli/bin/vgmstream-cli" ./vgmstream-cli
+          elif [ -f "$PWD/vgmcli/vgmstream-cli" ]; then
+            ln -s "$PWD/vgmcli/vgmstream-cli" ./vgmstream-cli
+          else
+            echo "vgmstream-cli not found in zip" >&2
+            ls -R vgmcli
+            exit 1
+          fi
+          chmod +x ./vgmstream-cli
+
+      - name: Convert FSB -> OGG (libvorbis, quality=4)
+        shell: bash
+        run: |
+          set -e
+          mkdir -p sounds_flat
+          rm -f sounds_flat/*
+
+          total=0; ok=0; fail=0
+          while IFS= read -r -d '' f; do
+            rel="${f#mojang_sounds/}"                 # ui/loom/take_result1.fsb
+            base="${rel%.*}"                          # ui/loom/take_result1
+            out="sounds_flat/${base}.ogg"
+            mkdir -p "$(dirname "$out")"
+
+            # vgmstream에서 디코드 → 파이프로 ffmpeg에 넘겨 ogg로 인코드
+            if ./vgmstream-cli -o - "$f" 2>/dev/null | ffmpeg -loglevel error -y -i - -c:a libvorbis -qscale:a 4 "$out"; then
+              echo "OK: $rel -> ${base}.ogg"
+              ok=$((ok+1))
+            else
+              echo "SKIP: $rel (unsupported codec?)"
+              # 실패한 파일은 건너뛰되, 표시용으로 비워두지 않도록 제거
+              rm -f "$out"
+              fail=$((fail+1))
+            fi
+            total=$((total+1))
+          done < <(find mojang_sounds -type f -name '*.fsb' -print0)
+
+          echo "Converted: $ok / $total (failed: $fail)"
+          # 변환 파일만 납작(flat)한 경로로 복사 (중첩 폴더 제거)
+          # -> manifest에서 url만 쓰므로 그대로 유지해도 됨. (현재는 경로 보존)
+
+      - name: Create manifest.json (for the site)
+        shell: bash
+        run: |
+          set -e
+          python3 - <<'PY'
+          import os, json
+          items = []
+          root = "sounds_flat"
+          for dirpath, _, files in os.walk(root):
+            for fn in files:
+              if not fn.lower().endswith(".ogg"): continue
+              rel = os.path.join(dirpath, fn).replace("\\","/")
+              rel2 = rel[len(root)+1:]  # ui/loom/take_result1.ogg
+              base = rel2[:-4]          # ui/loom/take_result1
+              items.append({
+                "id": f"minecraft:{base}",
+                "label": base,                      # 화면에는 접두사 빼고 표시함
+                "url": rel,
+                "type": "ogg"
+              })
+          items.sort(key=lambda x: x["label"])
+          with open(os.path.join(root, "manifest.json"), "w", encoding="utf-8") as f:
+            json.dump(items, f, ensure_ascii=False, indent=2)
+          print(f"manifest entries: {len(items)}")
+          PY
+
+      - name: Commit results (sounds_flat/)
+        run: |
+          set -e
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sounds_flat
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Auto: convert FSB -> OGG and update manifest"
+            git push
+          fi
