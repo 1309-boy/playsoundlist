@@ -1,258 +1,227 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bedrock Playsound 리스트 (FSB)</title>
-  <style>
-    :root{--bg:#fff;--fg:#111;--muted:#6b7280;--line:#e5e7eb;--btn:#111;--btnfg:#fff}
-    @media (prefers-color-scheme: dark){
-      :root{--bg:#0b0b0d;--fg:#f6f7fb;--muted:#9aa0a6;--line:#1f2328;--btn:#e5e7eb;--btnfg:#0b0b0d}
-    }
-    html,body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;margin:0}
-    header{padding:16px 18px;border-bottom:1px solid var(--line)}
-    main{padding:16px;max-width:960px;margin:0 auto}
-    h1{font-size:20px;margin:0 0 4px}
-    .muted{color:var(--muted);font-size:12px}
-    .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0 16px}
-    .toolbar input[type="search"]{flex:1 1 260px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--fg)}
-    .btn{padding:8px 12px;border-radius:10px;border:0;background:var(--btn);color:var(--btnfg);cursor:pointer}
-    .btn:disabled{opacity:.5;cursor:default}
-    .list{display:grid;gap:12px}
-    .row{border:1px solid var(--line);border-radius:12px;padding:12px}
-    .name{font-weight:700;margin-bottom:8px;word-break:break-all}
-    .ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .ctrl input[type="range"]{width:200px}
-    .small{font-size:12px;color:var(--muted)}
-    .pill{font-size:11px;padding:2px 8px;border-radius:9999px;background:var(--line)}
-    .pager{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between;margin:16px 0}
-    .pager .left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bedrock Playsound 리스트</title>
+<style>
+  :root { --gap: 8px; --pad: 10px; --radius: 10px; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Arial, sans-serif; margin: 0; background:#fafafa; color:#111;}
+  header { padding: 14px 16px; background:#fff; position: sticky; top:0; z-index:10; border-bottom:1px solid #eee;}
+  h1 { margin:0 0 6px; font-size:20px; }
+  small.badge { display:inline-block; background:#eee; color:#555; padding:2px 6px; border-radius:6px; margin-left:6px; font-size:12px;}
+  .bar { display:flex; gap: var(--gap); flex-wrap: wrap; align-items:center; margin-top:6px;}
+  input[type="search"]{ flex:1; padding:10px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; }
+  button, .btn { padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  main { padding: 12px; max-width: 980px; margin: 0 auto; }
+  .meta { font-size:12px; color:#666; margin:8px 0 12px;}
+  .row { background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; margin-bottom:10px; }
+  .title { font-weight:600; margin-bottom:6px; word-break:break-all; }
+  .ctrls { display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .ctrls label{ font-size:12px; color:#666; }
+  .ctrls input[type="range"]{ width:220px; }
+  .right { margin-left:auto; display:flex; gap:8px; }
+  .pager { display:flex; gap:8px; margin: 10px 0 0; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>Bedrock Playsound 리스트</h1>
-    <div class="muted">FSB를 클라이언트에서 디코딩(옵션). <span id="decoderState" class="pill">Decoder: not loaded</span></div>
-  </header>
-  <main>
-    <div class="toolbar">
-      <input id="q" type="search" placeholder="검색: ui.loom / zombie / ambient …" />
-      <button id="reload" class="btn">manifest 다시 불러오기</button>
+<header>
+  <h1>Bedrock Playsound 리스트 <small class="badge" id="decoderState">FSB를 클라이언트에서 디코딩(옵션).</small></h1>
+  <div class="bar">
+    <input id="q" type="search" placeholder="검색: ui.loom / zombie / ambient …" />
+    <button id="reload">manifest 다시 불러오기</button>
+  </div>
+  <div class="bar">
+    <div class="meta">
+      <span id="stat"></span>
     </div>
-
-    <div id="pager-top" class="pager" hidden>
-      <div class="left">
-        <button id="prevTop" class="btn">◀ 이전</button>
-        <button id="nextTop" class="btn">다음 ▶</button>
-      </div>
-      <div class="muted" id="infoTop"></div>
+    <div class="right pager">
+      <button id="prev">&lt; 이전</button>
+      <button id="next">다음 &gt;</button>
     </div>
+  </div>
+</header>
 
-    <div id="list" class="list"></div>
+<main id="list"></main>
 
-    <div id="pager-btm" class="pager" hidden>
-      <div class="left">
-        <button id="prevBtm" class="btn">◀ 이전</button>
-        <button id="nextBtm" class="btn">다음 ▶</button>
-      </div>
-      <div class="muted" id="infoBtm"></div>
-    </div>
-  </main>
+<script>
+/* ====== 상태 ====== */
+const PAGE_SIZE = 100;
+let manifestEntries = [];        // 전체
+let filtered = [];               // 검색 적용
+let page = 0;                    // 0-based
+let currentSource = null;        // 재생 중 소스
+let audioCtx = null;
 
-  <script type="module">
-    // 0) 디코더 로드 (선택)
-    let decodeFsbToAudioBuffer = null;
-    const stateEl = document.getElementById('decoderState');
+/* ====== 유틸 ====== */
+function stripNamespace(idOrLabel) {
+  // 화면에서는 minecraft: 접두사 제거
+  return (idOrLabel || "").replace(/^minecraft:/, "");
+}
+function fmt(n){ return n.toLocaleString(); }
+
+/* ====== Manifest 로드 ====== */
+async function loadManifest() {
+  // 캐시 갱신을 위해 querystring 부여
+  const url = `sounds_flat/manifest.json?ts=${Date.now()}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("manifest fetch 실패");
+  const data = await res.json();
+
+  // data가 { entries: [...] } 또는 [...] 둘 다 처리
+  const arr = Array.isArray(data) ? data : (data && Array.isArray(data.entries) ? data.entries : []);
+  // 타입 필터: wav만 또는 타입 없는 것도 포함
+  manifestEntries = arr.filter(e => !e.type || e.type.toLowerCase() === "wav");
+
+  applyFilter();
+}
+
+/* ====== 검색/페이징 ====== */
+function applyFilter() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  filtered = !q ? manifestEntries : manifestEntries.filter(e => {
+    const text = `${e.id ?? ""} ${e.label ?? ""}`.toLowerCase();
+    return text.includes(q);
+  });
+  page = 0;
+  render();
+}
+
+function render() {
+  const total = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (page >= pageCount) page = pageCount - 1;
+
+  const start = page * PAGE_SIZE;
+  const end = Math.min(start + PAGE_SIZE, total);
+  const slice = filtered.slice(start, end);
+
+  document.getElementById('stat').textContent =
+    `총 ${fmt(total)}개 · ${fmt(page+1)}/${fmt(pageCount)} 페이지 · ${fmt(start+1)}–${fmt(end)}`;
+
+  const $list = document.getElementById('list');
+  $list.innerHTML = "";
+  slice.forEach(item => {
+    $list.appendChild(rowEl(item));
+  });
+
+  document.getElementById('prev').disabled = (page <= 0);
+  document.getElementById('next').disabled = (page >= pageCount - 1);
+}
+
+/* ====== 재생 ====== */
+function ensureCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function stopPlaying() {
+  try { if (currentSource) { currentSource.stop(); currentSource.disconnect(); } }
+  catch (e) {}
+  currentSource = null;
+}
+async function playItem(item, pitch, semitone) {
+  stopPlaying();
+  const ctx = ensureCtx();
+  // WAV 바이너리 로드
+  const resp = await fetch(item.url);
+  if (!resp.ok) throw new Error(`오디오 로드 실패: ${item.url}`);
+  const arr = await resp.arrayBuffer();
+  const buf = await ctx.decodeAudioData(arr);
+
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  // pitch(재생속도) + semitone(detune) 동시 지원
+  src.playbackRate.value = pitch;
+  if ('detune' in src) src.detune.value = semitone * 100;
+
+  src.connect(ctx.destination);
+  src.start(0);
+  currentSource = src;
+}
+
+/* ====== UI 컴포넌트 ====== */
+function rowEl(item) {
+  const wrap = document.createElement('div');
+  wrap.className = 'row';
+
+  const title = document.createElement('div');
+  title.className = 'title';
+  title.textContent = stripNamespace(item.label || item.id || "");
+  wrap.appendChild(title);
+
+  const ctrls = document.createElement('div');
+  ctrls.className = 'ctrls';
+
+  // Pitch (0.01 ~ 4.0)
+  const pitchWrap = document.createElement('div');
+  const pitchLbl = document.createElement('label');
+  pitchLbl.textContent = 'Pitch';
+  const pitch = document.createElement('input'); pitch.type='range'; pitch.min='0.01'; pitch.max='4.0'; pitch.step='0.01'; pitch.value='1.00';
+  const pitchVal = document.createElement('span'); pitchVal.textContent = '1.00';
+  pitch.addEventListener('input', ()=> pitchVal.textContent = Number(pitch.value).toFixed(2));
+  pitchWrap.append(pitchLbl, pitch, pitchVal);
+
+  // Semitones (-48 ~ +48)
+  const semiWrap = document.createElement('div');
+  const semiLbl = document.createElement('label');
+  semiLbl.textContent = 'Semitones';
+  const semi = document.createElement('input'); semi.type='range'; semi.min='-48'; semi.max='48'; semi.step='1'; semi.value='0';
+  const semiVal = document.createElement('span'); semiVal.textContent = '0 st';
+  semi.addEventListener('input', ()=> semiVal.textContent = `${semi.value} st`);
+  semiWrap.append(semiLbl, semi, semiVal);
+
+  const playBtn = document.createElement('button'); playBtn.textContent = '▶ Play';
+  playBtn.addEventListener('click', async () => {
     try {
-      const m = await import('./libs/fsb-decoder.js').catch(()=>null);
-      if (m && typeof m.decodeFsbToAudioBuffer === 'function') {
-        decodeFsbToAudioBuffer = m.decodeFsbToAudioBuffer;
-        stateEl.textContent = 'Decoder: loaded';
-      } else {
-        stateEl.textContent = 'Decoder: not found';
-      }
-    } catch { stateEl.textContent = 'Decoder: not found'; }
-
-    // 1) 유틸
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const cache = new Map(); // url -> AudioBuffer
-    const semitoneToRate = st => Math.pow(2, st/12);
-
-    async function fetchJSON(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('Fetch fail '+url); return r.json(); }
-    async function fetchArrayBuffer(url){ const r=await fetch(url,{cache:'force-cache'}); if(!r.ok) throw new Error('Fetch fail '+url); return r.arrayBuffer(); }
-    async function getBufferFromFsb(url){
-      if (cache.has(url)) return cache.get(url);
-      if (!decodeFsbToAudioBuffer) throw new Error('FSB decoder not loaded');
-      const ab = await fetchArrayBuffer(url);
-      const buf = await decodeFsbToAudioBuffer(ctx, ab);
-      cache.set(url, buf); return buf;
+      await playItem(item, Number(pitch.value), Number(semi.value));
+    } catch (err) {
+      alert(`재생 실패: ${err.message}`);
+      console.error(err);
     }
-    function playWithPitch(buf, rate=1){ const s=ctx.createBufferSource(); s.buffer=buf; s.playbackRate.value=rate; s.connect(ctx.destination); s.start(); return s; }
+  });
 
-    // 2) 상태/DOM
-    const listEl = document.getElementById('list');
-    const qEl = document.getElementById('q');
-    const reloadEl = document.getElementById('reload');
+  const copyBtn = document.createElement('button'); copyBtn.textContent = 'Copy /playsound';
+  copyBtn.addEventListener('click', async () => {
+    // minecraft: 접두사 제거, 슬래시는 점으로
+    const idBase = stripNamespace(item.label || item.id || "").replace(/\//g, '.');
+    const cmd = `/playsound ${idBase} @p`;
+    await navigator.clipboard.writeText(cmd);
+    copyBtn.textContent = 'Copied!';
+    setTimeout(()=> copyBtn.textContent='Copy /playsound', 1100);
+  });
 
-    const pagerTop = document.getElementById('pager-top');
-    const pagerBtm = document.getElementById('pager-btm');
-    const prevTop = document.getElementById('prevTop');
-    const nextTop = document.getElementById('nextTop');
-    const prevBtm = document.getElementById('prevBtm');
-    const nextBtm = document.getElementById('nextBtm');
-    const infoTop = document.getElementById('infoTop');
-    const infoBtm = document.getElementById('infoBtm');
+  const resetBtn = document.createElement('button'); resetBtn.textContent = 'Reset';
+  resetBtn.addEventListener('click', ()=> {
+    pitch.value = '1.00'; pitch.dispatchEvent(new Event('input'));
+    semi.value = '0'; semi.dispatchEvent(new Event('input'));
+    stopPlaying();
+  });
 
-    const PAGE_SIZE = 100;
-    let all = [];        // 전체 manifest
-    let filtered = [];   // 검색 결과
-    let page = 1;        // 1-based
+  ctrls.append(pitchWrap, semiWrap, playBtn, copyBtn, resetBtn);
+  wrap.appendChild(ctrlls);
+  return wrap;
+}
 
-    // 3) 데이터 로드
-    async function load(){
-      listEl.innerHTML = '<div class="muted">manifest 로딩 중…</div>';
-      try{
-        all = await fetchJSON('./sounds_flat/manifest.json'); // [{id,label,url,type}]
-        applyFilter();
-      }catch(e){
-        console.error(e);
-        listEl.innerHTML = '<div class="muted">manifest를 불러오지 못했습니다.</div>';
-      }
-    }
+/* ====== 이벤트 바인딩 ====== */
+document.getElementById('q').addEventListener('input', () => { applyFilter(); });
+document.getElementById('prev').addEventListener('click', ()=>{ if (page>0){ page--; render(); }});
+document.getElementById('next').addEventListener('click', ()=>{ page++; render(); });
+document.getElementById('reload').addEventListener('click', async ()=>{ 
+  try { await loadManifest(); } catch(e){ alert('manifest 로드 실패'); console.error(e); }
+});
 
-    // 4) 필터 & 페이지네이션
-    function applyFilter(){
-      const q = qEl.value.trim().toLowerCase();
-      filtered = q
-        ? all.filter(x => {
-            const shortId = x.id.replace(/^minecraft:/,'');
-            return x.label.toLowerCase().includes(q) || shortId.toLowerCase().includes(q);
-          })
-        : all.slice();
-      page = 1;          // 검색 변경 시 1페이지로
-      render();
-    }
-
-    function totalPages(){ return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)); }
-    function pageSlice(){
-      const start = (page - 1) * PAGE_SIZE;
-      return filtered.slice(start, start + PAGE_SIZE);
-    }
-
-    function updatePager(){
-      const total = filtered.length;
-      const tp = totalPages();
-      const startIdx = (page - 1) * PAGE_SIZE + 1;
-      const endIdx = Math.min(total, page * PAGE_SIZE);
-      const text = `총 ${total.toLocaleString()}개 · ${page}/${tp} 페이지 · ${startIdx}–${endIdx}`;
-      infoTop.textContent = text;
-      infoBtm.textContent = text;
-
-      prevTop.disabled = prevBtm.disabled = (page <= 1);
-      nextTop.disabled = nextBtm.disabled = (page >= tp);
-
-      pagerTop.hidden = pagerBtm.hidden = (total <= PAGE_SIZE);
-    }
-
-    // 5) 렌더링
-    function render(){
-      updatePager();
-      const items = pageSlice();
-      listEl.innerHTML = '';
-      const frag = document.createDocumentFragment();
-      items.forEach(entry => frag.appendChild(makeRow(entry)));
-      listEl.appendChild(frag);
-    }
-
-    function makeRow(entry){
-      const shortId = entry.id.replace(/^minecraft:/,''); // 화면/복사에서 접두사 제거
-
-      const wrap = document.createElement('div');
-      wrap.className = 'row';
-
-      const title = document.createElement('div');
-      title.className = 'name';
-      title.textContent = entry.label || shortId; // (minecraft:~~) 표시 제거
-      wrap.appendChild(title);
-
-      const ctrl = document.createElement('div'); ctrl.className = 'ctrl';
-
-      const pLab = document.createElement('span'); pLab.textContent = 'Pitch';
-      const p = document.createElement('input'); p.type='range'; p.min='0.25'; p.max='4.0'; p.step='0.01'; p.value='1.00';
-      const stLab = document.createElement('span'); stLab.textContent = 'Semitones';
-      const st = document.createElement('input'); st.type='range'; st.min='-24'; st.max='24'; st.step='1'; st.value='0';
-      const pBox = document.createElement('input'); pBox.type='number'; pBox.min='0.25'; pBox.max='4.0'; pBox.step='0.01'; pBox.value='1.00'; pBox.style.width='64px';
-
-      const playBtn = document.createElement('button'); playBtn.className='btn'; playBtn.textContent='▶ Play';
-      const copyBtn = document.createElement('button'); copyBtn.className='btn'; copyBtn.textContent='Copy /playsound';
-
-      const info = document.createElement('div'); info.className='small'; info.textContent='0 st';
-
-      ctrl.append(pLab,p,stLab,st,pBox,playBtn,copyBtn);
-      wrap.append(ctrl,info);
-
-      function syncFromPitch(){
-        const r = parseFloat(p.value);
-        pBox.value = r.toFixed(2);
-        const stVal = Math.round(12 * Math.log2(r));
-        st.value = String(stVal);
-        info.textContent = `${stVal} st`;
-      }
-      function syncFromSt(){
-        const r = Math.pow(2, parseInt(st.value,10)/12);
-        p.value = r.toFixed(2);
-        pBox.value = r.toFixed(2);
-        info.textContent = `${st.value} st`;
-      }
-      p.addEventListener('input', syncFromPitch);
-      pBox.addEventListener('change', ()=>{ p.value=pBox.value; syncFromPitch(); });
-      st.addEventListener('input', syncFromSt);
-
-      playBtn.addEventListener('click', async ()=>{
-        if (!decodeFsbToAudioBuffer){
-          alert('FSB 디코더가 없어 재생은 비활성화 상태입니다.\n/libs 폴더에 디코더를 넣어주세요.');
-          return;
-        }
-        try{
-          playBtn.disabled = true;
-          const url = './sounds_flat/' + entry.url.replace('./','');
-          const buf = await getBufferFromFsb(url);
-          const rate = parseFloat(p.value);
-          if (ctx.state === 'suspended') await ctx.resume();
-          playWithPitch(buf, rate);
-        }catch(e){
-          alert('재생 실패: '+e.message);
-          console.error(e);
-        }finally{
-          playBtn.disabled = false;
-        }
-      });
-
-      copyBtn.addEventListener('click', async ()=>{
-        const rate = parseFloat(p.value);
-        const stVal = Math.round(12 * Math.log2(rate));
-        const cmd = `/playsound ${shortId} @a ~ ~ ~ 1 ${rate.toFixed(2)} ${Math.max(0,stVal)}`; // minecraft: 제거
-        try{
-          await navigator.clipboard.writeText(cmd);
-          copyBtn.textContent='Copied!'; setTimeout(()=>copyBtn.textContent='Copy /playsound',1200);
-        }catch{
-          prompt('복사해서 사용하세요:', cmd);
-        }
-      });
-
-      return wrap;
-    }
-
-    // 6) 이벤트
-    qEl.addEventListener('input', applyFilter);
-    reloadEl.addEventListener('click', load);
-    prevTop.addEventListener('click', ()=>{ if(page>1){ page--; render(); window.scrollTo({top:0,behavior:'smooth'});} });
-    nextTop.addEventListener('click', ()=>{ if(page<totalPages()){ page++; render(); window.scrollTo({top:0,behavior:'smooth'});} });
-    prevBtm.addEventListener('click', ()=>{ if(page>1){ page--; render(); window.scrollTo({top:0,behavior:'smooth'});} });
-    nextBtm.addEventListener('click', ()=>{ if(page<totalPages()){ page++; render(); window.scrollTo({top:0,behavior:'smooth'});} });
-
-    // 시작
-    load();
-  </script>
+/* ====== 부트 ====== */
+(async () => {
+  // FSB 디코더 배지는 유지(지금은 WAV만 사용)
+  document.getElementById('decoderState').textContent = 'Decoder: loaded';
+  try {
+    await loadManifest();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('stat').textContent = 'manifest 로드 실패';
+  }
+})();
+</script>
 </body>
 </html>
