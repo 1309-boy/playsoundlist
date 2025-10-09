@@ -21,14 +21,23 @@ jobs:
           set -e
           git clone --depth=1 https://github.com/Mojang/bedrock-samples.git
           mkdir -p mojang_sounds
-          cp -a bedrock-samples/resource_pack/sounds/. mojang_sounds/
+          # 🔍 sounds 폴더 자동 탐색
+          snd_path=$(find bedrock-samples -type d -path "*/sounds" | head -n1)
+          echo "Found sounds directory at: $snd_path"
+          if [ -z "$snd_path" ]; then
+            echo "Error: could not find 'sounds' directory inside bedrock-samples" >&2
+            exit 1
+          fi
+          cp -a "$snd_path/." mojang_sounds/
+          echo "Copied sounds to mojang_sounds/"
+          find mojang_sounds -type f | head
 
-      - name: Install deps (jq, ffmpeg for optional transcode)
+      - name: Install deps (jq, ffmpeg, unzip, curl)
         run: |
           sudo apt-get update
           sudo apt-get install -y jq ffmpeg unzip curl
 
-      # 🔹 vgmstream 최신 릴리스에서 리눅스 CLI 바이너리 자동 다운로드
+      # ✅ vgmstream 최신 릴리스에서 리눅스용 CLI 다운로드
       - name: Download vgmstream-cli (prebuilt)
         run: |
           set -e
@@ -41,10 +50,9 @@ jobs:
           echo "Downloading: $url"
           curl -L "$url" -o vgmstream-linux-cli.zip
           unzip -q vgmstream-linux-cli.zip -d vgmcli
-          # 흔한 구조: ./vgmstream-cli 또는 ./bin/vgmstream-cli
           chmod +x vgmcli/vgmstream-cli 2>/dev/null || true
           chmod +x vgmcli/bin/vgmstream-cli 2>/dev/null || true
-          # 사용 경로 통일
+          # 실행 파일 위치 확인 후 링크 설정
           if [ -x vgmcli/vgmstream-cli ]; then
             ln -s "$PWD/vgmcli/vgmstream-cli" ./vgmstream-cli
           elif [ -x vgmcli/bin/vgmstream-cli ]; then
@@ -60,14 +68,15 @@ jobs:
         run: |
           set -e
           mkdir -p out
-          # 모든 .fsb 순회 후 평탄화된 파일명으로 변환
           find mojang_sounds -type f -name '*.fsb' -print0 | while IFS= read -r -d '' f; do
-            rel="${f#mojang_sounds/}"        # ui/loom/take_result1.fsb
-            noext="${rel%.fsb}"              # ui/loom/take_result1
-            base="${noext//\//.}"            # ui.loom.take_result1
+            rel="${f#mojang_sounds/}"
+            noext="${rel%.fsb}"
+            base="${noext//\//.}"
+            echo "Converting: $rel -> ${base}.wav"
             ./vgmstream-cli -D "$f" -o "out/${base}.wav" >/dev/null || true
           done
-          ls -l out | head || true
+          echo "Total WAVs:"
+          ls out | wc -l
           if ! ls out/*.wav >/dev/null 2>&1; then
             echo "No WAVs produced." >&2
             exit 1
@@ -98,7 +107,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Auto: Convert Mojang FSB -> WAV + manifest (prebuilt vgmstream)"
+            git commit -m "Auto: Convert Mojang FSB -> WAV + manifest (fixed path)"
             git push
           fi
 
