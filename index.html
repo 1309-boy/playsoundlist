@@ -1,57 +1,38 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Bedrock Playsound 리스트</title>
 <style>
-body { font-family: sans-serif; margin: 1em; background:#f5f5f5; color:#222; }
-h1 { font-size:1.4em; margin-bottom:.2em; }
-.search { width:100%; padding:.5em; margin:.5em 0; font-size:1em; }
-.sound-item { background:#fff; border-radius:10px; padding:.8em; margin-bottom:.5em;
-              box-shadow:0 1px 3px rgba(0,0,0,.1); }
-.sound-item strong { display:block; font-size:1em; margin-bottom:.3em; }
-button { margin-left:.3em; padding:.3em .6em; border:none; border-radius:6px;
-         background:#222; color:#fff; font-weight:bold; }
-.pagination { margin:1em 0; }
-.pagination button { background:#444; color:#fff; margin-right:.5em; }
-#debug { font-size:12px; color:#666; white-space:pre-wrap; margin-top:1em; }
+  body{font-family:system-ui,Segoe UI,Apple SD Gothic Neo,sans-serif;margin:16px;background:#f5f5f5;color:#222}
+  h1{font-size:20px;margin:0 0 8px}
+  .search{width:100%;padding:8px 10px;margin:.5em 0;border:1px solid #ccc;border-radius:6px}
+  .sound-item{background:#fff;border-radius:10px;padding:.8em;margin:.5em 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .sound-item strong{display:block;margin-bottom:.35em}
+  button{padding:.35em .7em;border:0;border-radius:6px;background:#222;color:#fff;font-weight:700}
+  .pagination{margin:.6em 0}
+  .pagination button{background:#444}
+  #debugBox{background:#eee;border:1px solid #ddd;border-radius:6px;padding:8px;white-space:pre-wrap;font-size:12px;color:#333;margin:8px 0}
 </style>
 </head>
-
 <body>
-  <div style="max-width: 980px; margin: 16px auto; padding: 8px;">
-    <h1 style="font-size:20px; margin:0 0 8px;">
+  <div style="max-width:980px;margin:0 auto">
+    <h1>
       Bedrock Playsound 리스트
-      <small id="decoder-status" style="font-weight:normal; font-size:12px; color:#666; margin-left:8px;">Decoder: loading…</small>
+      <small id="decoder-status" style="font-size:12px;color:#666;margin-left:6px;">Decoder: loading…</small>
     </h1>
 
-    <!-- 검색 -->
-    <div style="display:flex; gap:8px; align-items:center; margin:10px 0;">
-      <input id="search" type="text" placeholder="검색: ui.loom / zombie / ambient …"
-             oninput="renderList()"
-             style="flex:1; padding:8px 10px; border:1px solid #ccc; border-radius:6px;">
-      <button onclick="loadManifest(true)"
-              style="padding:8px 10px; border:1px solid #ddd; border-radius:6px; background:#f7f7f7;">
-        manifest 다시 불러오기
-      </button>
+    <!-- 항상 보이는 디버그 박스 -->
+    <div id="debugBox">디버그 로그가 여기 표시됩니다…</div>
+
+    <div style="display:flex;gap:8px;align-items:center;margin:10px 0">
+      <input id="search" class="search" placeholder="검색: ui.loom / zombie / ambient …" oninput="renderList()">
+      <button style="background:#f7f7f7;color:#222;border:1px solid #ddd" onclick="loadManifest(true)">manifest 다시 불러오기</button>
     </div>
 
-    <!-- 페이지 정보 / 버튼 -->
-    <div id="pagination" style="margin:8px 0; font-size:13px;">
-      <!-- JS가 채움 -->
-    </div>
-
-    <!-- 목록이 그려질 자리 -->
-    <div id="list" style="display:flex; flex-direction:column; gap:10px;">
-      <!-- JS가 채움 -->
-    </div>
-
-    <!-- 디버그 로그 보기용 -->
-    <details style="margin-top:14px;">
-      <summary style="cursor:pointer;">디버그</summary>
-      <pre id="debug" style="background:#f6f6f6; padding:10px; border:1px solid #eee; border-radius:6px; white-space:pre-wrap;"></pre>
-    </details>
+    <div id="pagination" class="pagination"></div>
+    <div id="list"></div>
   </div>
 
 <script>
@@ -60,105 +41,104 @@ let manifestEntries = [];
 let currentPage = 1;
 const pageSize = 100;
 
-function logDebug(msg, extra) {
-  const dbg = document.getElementById('debug');
-  try {
-    dbg.textContent += (dbg.textContent ? '\n' : '') + msg + (extra ? ' ' + JSON.stringify(extra) : '');
-  } catch { dbg.textContent += '\n' + msg; }
+function dbg(msg, extra) {
+  const box = document.getElementById('debugBox');
+  const line = msg + (extra!==undefined ? ' ' + JSON.stringify(extra) : '');
+  box.textContent = (box.textContent ? box.textContent + '\n' : '') + line;
+  // 콘솔에도 같이 남겨두기
+  try { console.log('[DBG]', msg, extra ?? ''); } catch {}
 }
 
-async function loadManifest(showAlert = true) {
-  const dbg = document.getElementById('debug');
-  dbg.textContent = 'Manifest 로드 중...';
-  try {
-    const url = MANIFEST_URL + '?v=' + Date.now();
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) {
-      const msg = `HTTP ${res.status} ${res.statusText} — ${url}`;
-      dbg.textContent = 'Manifest fetch 실패: ' + msg;
-      if (showAlert) alert('manifest 로드 실패\n' + msg);
+async function loadManifest(showAlert=true){
+  const url = MANIFEST_URL + '?v=' + Date.now(); // 캐시무효화
+  dbg('Manifest fetch 시작:', url);
+  try{
+    const res = await fetch(url, {cache:'no-store'});
+    if(!res.ok){
+      const msg = `HTTP ${res.status} ${res.statusText}`;
+      dbg('Manifest fetch 실패:', msg);
+      if(showAlert) alert('manifest 로드 실패\n' + msg);
       return;
     }
     const text = await res.text();
     const json = JSON.parse(text);
-    manifestEntries = json.entries || [];
-    dbg.textContent = `Manifest loaded: ${manifestEntries.length}개 항목`;
+    manifestEntries = Array.isArray(json.entries) ? json.entries : [];
+    dbg('Manifest loaded, entries:', manifestEntries.length);
     currentPage = 1;
     renderList();
-  } catch (e) {
-    const msg = (e && e.message) ? e.message : String(e);
-    document.getElementById('debug').textContent = 'Manifest 처리 에러: ' + msg;
-    if (showAlert) alert('manifest 로드 실패\n' + msg);
+    if (manifestEntries.length === 0 && showAlert) {
+      alert('manifest는 로드됐지만 entries가 0개입니다.\n/sounds_flat/manifest.json 내용을 확인하세요.');
+    }
+  }catch(e){
+    const msg = e?.message || String(e);
+    dbg('Manifest 처리 에러:', msg);
+    if(showAlert) alert('manifest 로드 실패\n' + msg);
   }
 }
 
-function renderList() {
+function renderList(){
   const listEl = document.getElementById('list');
   const pagEl  = document.getElementById('pagination');
-  try {
-    const searchVal = (document.getElementById('search').value || '').toLowerCase();
-    const filtered = manifestEntries.filter(e => (e.label || '').toLowerCase().includes(searchVal));
-    const total = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    if (currentPage > totalPages) currentPage = totalPages;
+  const q = (document.getElementById('search').value || '').toLowerCase();
 
-    const start = (currentPage - 1) * pageSize;
-    const end = Math.min(start + pageSize, total);
-    const pageEntries = filtered.slice(start, end);
+  const filtered = manifestEntries.filter(e => (e.label||'').toLowerCase().includes(q));
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if(currentPage > totalPages) currentPage = totalPages;
 
-    logDebug(`renderList: total=${total}, page=${currentPage}/${totalPages}, slice=[${start}, ${end})`);
+  const start = (currentPage - 1) * pageSize;
+  const end = Math.min(start + pageSize, total);
+  const pageEntries = filtered.slice(start, end);
 
-    if (pageEntries.length === 0) {
-      listEl.innerHTML = '<div style="color:#666;">표시할 항목이 없습니다.</div>';
-    } else {
-      listEl.innerHTML = pageEntries.map(e => {
-        const label = (e.label || '').replace(/^minecraft:/,'');
-        const url   = e.url || '';
-        const audioId = 'audio-' + label.replace(/[^\w.-]+/g,'_');
-        return `
-          <div class="sound-item">
-            <strong>${label}</strong>
-            <audio id="${audioId}" src="${url}" preload="none"></audio>
-            <button onclick="playSoundById('${audioId}', '${label}')">▶ Play</button>
-            <button onclick="copyCommand('${label}')">Copy /playsound</button>
-          </div>`;
-      }).join('');
-    }
+  dbg(`renderList total=${total}, page=${currentPage}/${totalPages}, slice=[${start}, ${end})`);
 
-    pagEl.innerHTML =
-      `<span>총 ${total}개 · ${totalPages}페이지 (${total ? (start+1) : 0}–${end})</span><br>` +
-      `<button onclick="prevPage()">&lt; 이전</button><button onclick="nextPage()">다음 &gt;</button>`;
-  } catch (err) {
-    const msg = (err && err.message) ? err.message : String(err);
-    logDebug('renderList 에러:', msg);
-    document.getElementById('list').innerHTML =
-      `<div style="color:#c00;">렌더링 중 오류가 발생했습니다: ${msg}</div>`;
+  // 페이지 UI
+  pagEl.innerHTML =
+    `<div>총 ${total}개 · ${totalPages}페이지 (${total ? (start+1) : 0}–${end})
+      <button onclick="prevPage()">&lt; 이전</button>
+      <button onclick="nextPage()">다음 &gt;</button>
+    </div>`;
+
+  // 목록
+  if (pageEntries.length === 0){
+    listEl.innerHTML = '<div style="color:#666;margin:.6em 0">표시할 항목이 없습니다.</div>';
+    return;
   }
+  listEl.innerHTML = pageEntries.map(e=>{
+    const label = (e.label||'').replace(/^minecraft:/,'');
+    const url = e.url || '';
+    const id = 'a-' + label.replace(/[^\w.-]+/g,'_');
+    return `
+      <div class="sound-item">
+        <strong>${label}</strong>
+        <audio id="${id}" src="${url}" preload="none"></audio>
+        <button onclick="playById('${id}','${label}')">▶ Play</button>
+        <button onclick="copyCmd('${label}')">Copy /playsound</button>
+      </div>`;
+  }).join('');
 }
 
-function playSoundById(audioId, label) {
-  try {
-    const audio = document.getElementById(audioId);
-    if (!audio) { alert('오디오 요소를 찾을 수 없어요: ' + label); return; }
-    if (!audio.src) { alert('파일 URL이 비어있어요: ' + label); return; }
-    audio.currentTime = 0;
-    audio.play().catch(err => alert('재생 실패: ' + (err.message || err)));
-  } catch (e) {
-    alert('재생 오류: ' + (e.message || e));
-  }
+function prevPage(){ currentPage = Math.max(1, currentPage-1); renderList(); }
+function nextPage(){ currentPage += 1; renderList(); }
+
+function playById(id,label){
+  try{
+    const a = document.getElementById(id);
+    if(!a){ alert('오디오 요소 없음: '+label); return; }
+    if(!a.src){ alert('파일 URL 없음: '+label); return; }
+    a.currentTime = 0;
+    a.play().catch(err=>alert('재생 실패: '+(err?.message||err)));
+  }catch(e){ alert('재생 오류: '+(e?.message||e)); }
 }
 
-function copyCommand(label) {
+function copyCmd(label){
   const id = label.replace(/^minecraft:/,'');
   const cmd = `/playsound ${id}`;
   navigator.clipboard?.writeText(cmd);
   alert('복사됨: ' + cmd);
 }
 
-function prevPage() { currentPage = Math.max(1, currentPage - 1); renderList(); }
-function nextPage() { currentPage += 1; renderList(); }
-
-window.addEventListener('load', () => {
+window.addEventListener('load', ()=>{
   document.getElementById('decoder-status').textContent = 'Decoder: loaded';
   loadManifest(false);
 });
