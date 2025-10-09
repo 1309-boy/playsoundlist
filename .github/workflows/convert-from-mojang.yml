@@ -11,6 +11,7 @@ permissions:
 jobs:
   collect:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,44 +21,57 @@ jobs:
           set -e
           git clone --depth=1 https://github.com/Mojang/bedrock-samples.git
           mkdir -p mojang_sounds
+          # sounds 폴더 자동 탐색 (경로 변화 대비)
           snd_path=$(find bedrock-samples -type d -path "*/resource_pack/sounds" -o -path "*/sounds" | head -n1)
+          echo "Found sounds at: $snd_path"
           if [ -z "$snd_path" ]; then
             echo "Cannot find sounds directory" >&2; exit 1
           fi
           cp -a "$snd_path/." mojang_sounds/
-          find mojang_sounds -type f -name '*.fsb' | head
+          echo "Example files:"; find mojang_sounds -type f -name '*.fsb' | head
 
-      - name: Flatten FSB into sounds_flat/ and build manifest
-        shell: bash
+      - name: Flatten FSB into sounds_flat/
         run: |
           set -e
           mkdir -p sounds_flat
           rm -rf sounds_flat/*
-          # 평탄화: a/b/c.fsb -> a.b.c.fsb
+          # a/b/c.fsb -> a.b.c.fsb 로 평탄화
           while IFS= read -r -d '' f; do
             rel="${f#mojang_sounds/}"
             noext="${rel%.fsb}"
             base="${noext//\//.}"
             cp "$f" "sounds_flat/${base}.fsb"
           done < <(find mojang_sounds -type f -name '*.fsb' -print0)
+          echo "Flattened count: $(ls sounds_flat | wc -l)"
 
-          python3 - <<'PY'
-import os, json
-items=[]
-for fn in sorted(os.listdir('sounds_flat')):
-    if not fn.lower().endswith('.fsb'): continue
-    base = fn[:-4]  # drop .fsb
-    items.append({"id": f"minecraft:{base}", "label": base, "url": f"./{fn}", "type":"fsb"})
-with open('sounds_flat/manifest.json','w',encoding='utf-8') as f:
-    json.dump(items, f, ensure_ascii=False, indent=2)
-print("Manifest entries:", len(items))
-PY
+      - name: Build manifest.json
+        shell: python
+        run: |
+          import os, json
+          items = []
+          for fn in sorted(os.listdir('sounds_flat')):
+              if not fn.lower().endswith('.fsb'):
+                  continue
+              base = fn[:-4]  # drop .fsb
+              items.append({
+                  "id": f"minecraft:{base}",
+                  "label": base,
+                  "url": f"./{fn}",
+                  "type": "fsb"
+              })
+          with open('sounds_flat/manifest.json','w',encoding='utf-8') as f:
+              json.dump(items, f, ensure_ascii=False, indent=2)
+          print("Manifest entries:", len(items))
 
+      - name: Commit sounds_flat/ to repo
+        run: |
+          set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sounds_flat
           if git diff --cached --quiet; then
-            echo "No changes."; exit 0
+            echo "No changes to commit."
+          else
+            git commit -m "Collect FSB and manifest (no-convert)"
+            git push
           fi
-          git commit -m "Collect FSB and manifest (no-convert)"
-          git push
