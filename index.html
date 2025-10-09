@@ -1,1 +1,205 @@
-<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Bedrock Playsound</title><script src="https://cdn.tailwindcss.com"></script><script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script><script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script><script src="https://unpkg.com/@babel/standalone/babel.min.js"></script></head><body class='text-zinc-900 dark:text-zinc-50'><div id="root"></div><script type="text/babel">const {useState,useMemo,useRef,useEffect}=React;const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));const round=(v,d=2)=>{const f=10**d;return Math.round(v*f)/f};const pitchFromSemis=n=>2**(n/12);const semisFromPitch=p=>12*Math.log2(p);const demo=[{id:'demo.beep.c4',label:'Demo Beep C4 (261.63Hz)',oscHz:261.63},{id:'demo.beep.a4',label:'Demo Beep A4 (440Hz)',oscHz:440}];function App(){const[sounds,setSounds]=useState(demo);const[filter,setFilter]=useState('');const[semiRange,setSemiRange]=useState(48);const[vol,setVol]=useState(0.9);const[pitchMax,setPitchMax]=useState(4);const[pitchMap,setPitchMap]=useState(()=>new Map(demo.map(s=>[s.id,1])));const ctxRef=useRef(null),gainRef=useRef(null),bufRef=useRef(new Map()),actRef=useRef([]);const ensure=async()=>{if(!ctxRef.current){const c=new (window.AudioContext||window.webkitAudioContext)();const g=c.createGain();g.gain.value=vol;g.connect(c.destination);ctxRef.current=c;gainRef.current=g}if(ctxRef.current?.state==='suspended'){try{await ctxRef.current.resume()}catch{}}};useEffect(()=>{if(gainRef.current)gainRef.current.gain.value=vol},[vol]);const filtered=useMemo(()=>{const q=filter.trim().toLowerCase();return q?sounds.filter(s=>(s.id||'').toLowerCase().includes(q)||(s.label||'').toLowerCase().includes(q)):sounds},[filter,sounds]);const getP=id=>pitchMap.get(id)??1;const setP=(id,v)=>setPitchMap(p=>{const m=new Map(p);m.set(id,clamp(v,0.01,pitchMax));return m});const setSemis=(id,n)=>setP(id,clamp(pitchFromSemis(n),0.01,pitchMax));const stopAll=()=>{actRef.current.forEach(n=>{try{n.stop?.()}catch{}try{n.disconnect?.()}catch{}});actRef.current=[]};const beep=async(h=440,p=1,d=450)=>{await ensure();const c=ctxRef.current,g=gainRef.current,o=c.createOscillator(),e=c.createGain();o.type='sine';o.frequency.value=h*clamp(p,0.01,pitchMax);const now=c.currentTime;e.gain.setValueAtTime(0,now);e.gain.linearRampToValueAtTime(1,now+0.01);e.gain.linearRampToValueAtTime(0,now+Math.max(0.01,d/1000-0.03));o.connect(e);e.connect(g);actRef.current.push(o,e);o.start();o.stop(now+d/1000)};const loadBuf=async url=>{if(!url)return null;if(bufRef.current.has(url))return bufRef.current.get(url);await ensure();const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);const a=await r.arrayBuffer();const b=await ctxRef.current.decodeAudioData(a);bufRef.current.set(url,b);return b};const playBuf=async(b,p=1)=>{await ensure();const c=ctxRef.current,g=gainRef.current,s=c.createBufferSource();s.buffer=b;s.playbackRate.value=clamp(p,0.01,pitchMax);s.connect(g);s.start();actRef.current.push(s)};const play=async s=>{const p=getP(s.id);if(s.url){try{const b=await loadBuf(s.url);if(b)await playBuf(b,p)}catch{await beep(440,p)}}else if(s.oscHz){await beep(s.oscHz,p)}else{await beep(440,p)}};const copy=async id=>{const p=round(getP(id),2);const cmd=`/playsound ${id} @s ~ ~ ~ 1 ${p}`;try{await navigator.clipboard.writeText(cmd);alert('복사됨: '+cmd)}catch{prompt('아래 명령을 복사하세요:',cmd)}};const Row=({s})=>{const p=getP(s.id),st=round(semisFromPitch(p),2);return(<div className='p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/60'><div className='flex items-center justify-between gap-3'><div className='min-w-0'><div className='text-sm text-zinc-500 truncate'>{s.label||s.id}</div><div className='font-semibold truncate'>{s.id}</div></div><div className='flex gap-2 shrink-0'><button onClick={()=>play(s)} className='px-3 py-1.5 rounded-xl bg-zinc-900 text-white'>▶︎ Play</button><button onClick={()=>copy(s.id)} className='px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800'>Copy /playsound</button></div></div><div className='mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 items-center'><label className='flex flex-col'><span className='text-xs text-zinc-500'>Pitch (0.01–{pitchMax.toFixed(2)})</span><input type='range' min={0.01} max={pitchMax} step={0.01} value={p} onChange={e=>setP(s.id,parseFloat(e.target.value))}/><span className='text-sm'>{p.toFixed(2)}</span></label><label className='flex flex-col'><span className='text-xs text-zinc-500'>Semitones (±{semiRange})</span><input type='range' min={-semiRange} max={semiRange} step={0.01} value={st} onChange={e=>setSemis(s.id,parseFloat(e.target.value))}/><span className='text-sm'>{st.toFixed(2)} st</span></label><div className='flex items-end gap-2'><input type='number' min={0.01} max={pitchMax} step={0.01} value={p.toFixed(2)} onChange={e=>setP(s.id,parseFloat(e.target.value||'1'))} className='w-24 px-2 py-1 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900'/><button onClick={()=>setP(s.id,1)} className='px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800'>Reset</button></div></div></div>)};return(<div className='min-h-screen'><div className='mx-auto max-w-5xl px-4 py-8'><header className='flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6'><div><h1 className='text-2xl md:text-3xl font-bold'>Bedrock Playsound 리스트</h1><p className='text-zinc-500 mt-1 text-sm'>사운드 이벤트 목록 · 피치 조절 · /playsound 명령 복사</p></div></header><div className='grid gap-3'>{filtered.length===0?(<div className='text-zinc-500'>샘플이 없습니다.</div>):(filtered.map(s=><Row key={s.id} s={s}/>))}</div></div></div>)};const root=ReactDOM.createRoot(document.getElementById('root'));root.render(<App/>);</script></body></html>
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bedrock Playsound 리스트 (FSB)</title>
+  <style>
+    :root{--bg:#fff;--fg:#111;--muted:#6b7280;--line:#e5e7eb;--btn:#111;--btnfg:#fff}
+    @media (prefers-color-scheme: dark){
+      :root{--bg:#0b0b0d;--fg:#f6f7fb;--muted:#9aa0a6;--line:#1f2328;--btn:#e5e7eb;--btnfg:#0b0b0d}
+    }
+    html,body{background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,sans-serif;margin:0}
+    header{padding:16px 18px;border-bottom:1px solid var(--line)}
+    main{padding:16px;max-width:960px;margin:0 auto}
+    h1{font-size:20px;margin:0 0 4px}
+    .muted{color:var(--muted);font-size:12px}
+    .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0 16px}
+    .toolbar input[type="search"]{flex:1 1 260px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--fg)}
+    .btn{padding:8px 12px;border-radius:10px;border:0;background:var(--btn);color:var(--btnfg);cursor:pointer}
+    .btn:disabled{opacity:.5;cursor:default}
+    .list{display:grid;gap:12px}
+    .row{border:1px solid var(--line);border-radius:12px;padding:12px}
+    .name{font-weight:700;margin-bottom:8px;word-break:break-all}
+    .ctrl{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .ctrl input[type="range"]{width:200px}
+    .small{font-size:12px;color:var(--muted)}
+    .pill{font-size:11px;padding:2px 8px;border-radius:9999px;background:var(--line)}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Bedrock Playsound 리스트</h1>
+    <div class="muted">FSB를 클라이언트에서 디코딩(옵션). <span id="decoderState" class="pill">Decoder: not loaded</span></div>
+  </header>
+  <main>
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="검색: ui.loom / zombie / ambient …" />
+      <button id="reload" class="btn">manifest 다시 불러오기</button>
+    </div>
+    <div id="list" class="list"></div>
+  </main>
+
+  <script type="module">
+    // ─────────────────────────────────────────────────────────────
+    // 0) 디코더 선택 로딩 (선택 사항)
+    // libs/fsb-decoder.js 가 있으면 import 시도 → decodeFsbToAudioBuffer 제공
+    let decodeFsbToAudioBuffer = null;
+    const stateEl = document.getElementById('decoderState');
+    try {
+      const m = await import('./libs/fsb-decoder.js').catch(()=>null);
+      if (m && typeof m.decodeFsbToAudioBuffer === 'function') {
+        decodeFsbToAudioBuffer = m.decodeFsbToAudioBuffer;
+        stateEl.textContent = 'Decoder: loaded';
+      } else {
+        stateEl.textContent = 'Decoder: not found';
+      }
+    } catch {
+      stateEl.textContent = 'Decoder: not found';
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 1) 유틸
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const cache = new Map(); // url -> AudioBuffer
+    const semitoneToRate = st => Math.pow(2, st/12);
+
+    async function fetchJSON(url){
+      const r = await fetch(url, { cache: 'no-store' });
+      if(!r.ok) throw new Error('Fetch fail: '+url);
+      return await r.json();
+    }
+    async function fetchArrayBuffer(url){
+      const r = await fetch(url, { cache: 'force-cache' });
+      if(!r.ok) throw new Error('Fetch fail: '+url);
+      return await r.arrayBuffer();
+    }
+    async function getBufferFromFsb(url){
+      if (cache.has(url)) return cache.get(url);
+      if (!decodeFsbToAudioBuffer) throw new Error('FSB decoder not loaded');
+      const ab = await fetchArrayBuffer(url);
+      const buf = await decodeFsbToAudioBuffer(ctx, ab);
+      cache.set(url, buf);
+      return buf;
+    }
+    function playWithPitch(buf, rate=1){
+      const src = ctx.createBufferSource();
+      src.buffer = buf; src.playbackRate.value = rate;
+      src.connect(ctx.destination); src.start();
+      return src;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 2) manifest 로드 & 렌더
+    const listEl = document.getElementById('list');
+    const qEl = document.getElementById('q');
+    const reloadEl = document.getElementById('reload');
+
+    let all = [];
+    async function load(){
+      listEl.innerHTML = '<div class="muted">manifest 로딩 중…</div>';
+      try{
+        all = await fetchJSON('./sounds_flat/manifest.json'); // [{id,label,url,type}]
+        render(all);
+      }catch(e){
+        listEl.innerHTML = '<div class="muted">manifest를 불러오지 못했습니다.</div>';
+        console.error(e);
+      }
+    }
+
+    function render(items){
+      const q = qEl.value.trim().toLowerCase();
+      const filtered = q ? items.filter(x =>
+        x.id.toLowerCase().includes(q) || x.label.toLowerCase().includes(q)
+      ) : items;
+
+      listEl.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      filtered.forEach(entry => frag.appendChild(makeRow(entry)));
+      listEl.appendChild(frag);
+    }
+
+    function makeRow(entry){
+      const wrap = document.createElement('div');
+      wrap.className = 'row';
+
+      const title = document.createElement('div');
+      title.className = 'name';
+      title.textContent = `${entry.label}  (${entry.id})`;
+      wrap.appendChild(title);
+
+      const ctrl = document.createElement('div'); ctrl.className = 'ctrl';
+
+      const pLab = document.createElement('span'); pLab.textContent = 'Pitch';
+      const p = document.createElement('input'); p.type='range'; p.min='0.25'; p.max='4.0'; p.step='0.01'; p.value='1.00';
+      const stLab = document.createElement('span'); stLab.textContent = 'Semitones';
+      const st = document.createElement('input'); st.type='range'; st.min='-24'; st.max='24'; st.step='1'; st.value='0';
+      const pBox = document.createElement('input'); pBox.type='number'; pBox.min='0.25'; pBox.max='4.0'; pBox.step='0.01'; pBox.value='1.00'; pBox.style.width='64px';
+
+      const playBtn = document.createElement('button'); playBtn.className='btn'; playBtn.textContent='▶ Play';
+      const copyBtn = document.createElement('button'); copyBtn.className='btn'; copyBtn.textContent='Copy /playsound';
+
+      const info = document.createElement('div'); info.className='small'; info.textContent='0 st';
+
+      ctrl.append(pLab,p,stLab,st,pBox,playBtn,copyBtn);
+      wrap.append(ctrl,info);
+
+      function syncFromPitch(){
+        const r = parseFloat(p.value);
+        pBox.value = r.toFixed(2);
+        const stVal = Math.round(12 * Math.log2(r));
+        st.value = String(stVal);
+        info.textContent = `${stVal} st`;
+      }
+      function syncFromSt(){
+        const r = semitoneToRate(parseInt(st.value,10));
+        p.value = r.toFixed(2);
+        pBox.value = r.toFixed(2);
+        info.textContent = `${st.value} st`;
+      }
+      p.addEventListener('input', syncFromPitch);
+      pBox.addEventListener('change', ()=>{ p.value=pBox.value; syncFromPitch(); });
+      st.addEventListener('input', syncFromSt);
+
+      playBtn.addEventListener('click', async ()=>{
+        if (!decodeFsbToAudioBuffer){
+          alert('FSB 디코더가 없어 재생은 비활성화 상태입니다.\n/libs 폴더에 디코더를 넣어주세요.');
+          return;
+        }
+        try{
+          playBtn.disabled = true;
+          const url = './sounds_flat/' + entry.url.replace('./','');
+          const buf = await getBufferFromFsb(url);
+          const rate = parseFloat(p.value);
+          if (ctx.state === 'suspended') await ctx.resume();
+          playWithPitch(buf, rate);
+        }catch(e){
+          alert('재생 실패: '+e.message);
+          console.error(e);
+        }finally{
+          playBtn.disabled = false;
+        }
+      });
+
+      copyBtn.addEventListener('click', async ()=>{
+        const rate = parseFloat(p.value);
+        const stVal = Math.round(12 * Math.log2(rate));
+        const cmd = `/playsound ${entry.id} @a ~ ~ ~ 1 ${rate.toFixed(2)} ${Math.max(0,stVal)}`;
+        try{
+          await navigator.clipboard.writeText(cmd);
+          copyBtn.textContent='Copied!'; setTimeout(()=>copyBtn.textContent='Copy /playsound',1200);
+        }catch{
+          prompt('복사해서 사용하세요:', cmd);
+        }
+      });
+
+      return wrap;
+    }
+
+    qEl.addEventListener('input', ()=> render(all));
+    reloadEl.addEventListener('click', load);
+
+    load();
+  </script>
+</body>
+</html>
