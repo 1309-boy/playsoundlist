@@ -21,7 +21,7 @@ jobs:
           git clone --depth=1 https://github.com/Mojang/bedrock-samples.git
           mkdir -p mojang_sounds
           cp -a bedrock-samples/resource_pack/sounds/. mojang_sounds/
-          echo "Sample of fetched files:"
+          echo "Sample of fetched FSB files:"
           find mojang_sounds -type f -name '*.fsb' | head
 
       - name: Install jq and unzip
@@ -57,7 +57,7 @@ jobs:
         run: |
           set -e
           mkdir -p sounds_flat
-          # 테스트로 개수 제한하려면 아래 주석 해제:
+          # 테스트로 일부만 돌리고 싶으면 주석 해제:
           # LIMIT=50
 
           total=0; ok=0; fail=0
@@ -105,13 +105,14 @@ jobs:
               items.append({
                 "id": f"minecraft:{base}",
                 "label": base,
-                "url": rel,                # 브라우저가 직접 받을 경로
+                "url": rel,                # 브라우저가 직접 받는 경로
                 "type": "wav"
               })
           items.sort(key=lambda x: x["label"])
           os.makedirs(root, exist_ok=True)
+          # ✅ index.html이 기대하는 형태(`entries`)로 래핑
           with open(os.path.join(root, "manifest.json"), "w", encoding="utf-8") as f:
-            json.dump(items, f, ensure_ascii=False, indent=2)
+            json.dump({ "entries": items }, f, ensure_ascii=False, indent=2)
           print(f"manifest entries: {len(items)}")
           PY
 
