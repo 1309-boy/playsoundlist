@@ -1,19 +1,18 @@
-name: Convert Mojang Samples (FSB -> WAV)
+name: Collect Mojang FSB (no-convert) and make manifest
 
 on:
-  workflow_dispatch: {}         # 수동 실행
+  workflow_dispatch: {}
   push:
-    branches: [ main ]          # main에 커밋되면 자동 실행
+    branches: [ main ]
 
 permissions:
   contents: write
 
 jobs:
-  convert:
+  collect:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout this repo
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Fetch Mojang bedrock-samples (sounds only)
@@ -21,98 +20,44 @@ jobs:
           set -e
           git clone --depth=1 https://github.com/Mojang/bedrock-samples.git
           mkdir -p mojang_sounds
-          # 🔍 sounds 폴더 자동 탐색
-          snd_path=$(find bedrock-samples -type d -path "*/sounds" | head -n1)
-          echo "Found sounds directory at: $snd_path"
+          snd_path=$(find bedrock-samples -type d -path "*/resource_pack/sounds" -o -path "*/sounds" | head -n1)
           if [ -z "$snd_path" ]; then
-            echo "Error: could not find 'sounds' directory inside bedrock-samples" >&2
-            exit 1
+            echo "Cannot find sounds directory" >&2; exit 1
           fi
           cp -a "$snd_path/." mojang_sounds/
-          echo "Copied sounds to mojang_sounds/"
-          find mojang_sounds -type f | head
+          find mojang_sounds -type f -name '*.fsb' | head
 
-      - name: Install deps (jq, ffmpeg, unzip, curl)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq ffmpeg unzip curl
-
-      # ✅ vgmstream 최신 릴리스에서 리눅스용 CLI 다운로드
-      - name: Download vgmstream-cli (prebuilt)
-        run: |
-          set -e
-          api="https://api.github.com/repos/vgmstream/vgmstream/releases/latest"
-          url=$(curl -sL "$api" | jq -r '.assets[] | select(.name|test("linux.*cli.*zip")) | .browser_download_url' | head -n1)
-          if [ -z "$url" ] || [ "$url" = "null" ]; then
-            echo "Could not find linux cli asset in latest release" >&2
-            exit 1
-          fi
-          echo "Downloading: $url"
-          curl -L "$url" -o vgmstream-linux-cli.zip
-          unzip -q vgmstream-linux-cli.zip -d vgmcli
-          chmod +x vgmcli/vgmstream-cli 2>/dev/null || true
-          chmod +x vgmcli/bin/vgmstream-cli 2>/dev/null || true
-          # 실행 파일 위치 확인 후 링크 설정
-          if [ -x vgmcli/vgmstream-cli ]; then
-            ln -s "$PWD/vgmcli/vgmstream-cli" ./vgmstream-cli
-          elif [ -x vgmcli/bin/vgmstream-cli ]; then
-            ln -s "$PWD/vgmcli/bin/vgmstream-cli" ./vgmstream-cli
-          else
-            echo "vgmstream-cli not found inside zip" >&2
-            ls -R vgmcli || true
-            exit 1
-          fi
-          ./vgmstream-cli -h || true
-
-      - name: Convert FSB -> WAV (flatten)
-        run: |
-          set -e
-          mkdir -p out
-          find mojang_sounds -type f -name '*.fsb' -print0 | while IFS= read -r -d '' f; do
-            rel="${f#mojang_sounds/}"
-            noext="${rel%.fsb}"
-            base="${noext//\//.}"
-            echo "Converting: $rel -> ${base}.wav"
-            ./vgmstream-cli -D "$f" -o "out/${base}.wav" >/dev/null || true
-          done
-          echo "Total WAVs:"
-          ls out | wc -l
-          if ! ls out/*.wav >/dev/null 2>&1; then
-            echo "No WAVs produced." >&2
-            exit 1
-          fi
-
-      - name: Create manifest.json (minecraft:<id>)
-        shell: python
-        run: |
-          import os, json
-          items = []
-          for fn in sorted(os.listdir('out')):
-              if not fn.lower().endswith(('.wav','.ogg')): continue
-              base, ext = os.path.splitext(fn)
-              items.append({"id": f"minecraft:{base}", "label": base, "url": f"./{fn}"})
-          with open('out/manifest.json','w',encoding='utf-8') as f:
-              json.dump(items, f, ensure_ascii=False, indent=2)
-          print("Wrote out/manifest.json with", len(items), "entries")
-
-      - name: Commit to repo (sounds_flat/)
+      - name: Flatten FSB into sounds_flat/ and build manifest
+        shell: bash
         run: |
           set -e
           mkdir -p sounds_flat
           rm -rf sounds_flat/*
-          cp -a out/. sounds_flat/
+          # 평탄화: a/b/c.fsb -> a.b.c.fsb
+          while IFS= read -r -d '' f; do
+            rel="${f#mojang_sounds/}"
+            noext="${rel%.fsb}"
+            base="${noext//\//.}"
+            cp "$f" "sounds_flat/${base}.fsb"
+          done < <(find mojang_sounds -type f -name '*.fsb' -print0)
+
+          python3 - <<'PY'
+import os, json
+items=[]
+for fn in sorted(os.listdir('sounds_flat')):
+    if not fn.lower().endswith('.fsb'): continue
+    base = fn[:-4]  # drop .fsb
+    items.append({"id": f"minecraft:{base}", "label": base, "url": f"./{fn}", "type":"fsb"})
+with open('sounds_flat/manifest.json','w',encoding='utf-8') as f:
+    json.dump(items, f, ensure_ascii=False, indent=2)
+print("Manifest entries:", len(items))
+PY
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add sounds_flat
           if git diff --cached --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "Auto: Convert Mojang FSB -> WAV + manifest (fixed path)"
-            git push
+            echo "No changes."; exit 0
           fi
-
-      - name: Upload artifact (optional download)
-        uses: actions/upload-artifact@v4
-        with:
-          name: sounds_flat
-          path: out/
+          git commit -m "Collect FSB and manifest (no-convert)"
+          git push
