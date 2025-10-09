@@ -1,12 +1,12 @@
 name: Convert Mojang Samples (FSB -> WAV)
 
 on:
-  workflow_dispatch: {}         # 수동 실행 버튼
+  workflow_dispatch: {}         # 수동 실행
   push:
     branches: [ main ]          # main에 커밋되면 자동 실행
 
 permissions:
-  contents: write               # 결과를 레포에 커밋하려면 write 필요
+  contents: write
 
 jobs:
   convert:
@@ -23,23 +23,37 @@ jobs:
           mkdir -p mojang_sounds
           cp -a bedrock-samples/resource_pack/sounds/. mojang_sounds/
 
-      - name: Install build deps
+      - name: Install deps (jq, ffmpeg for optional transcode)
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config git \
-            libmpg123-dev libvorbis-dev libogg-dev libopusfile-dev \
-            libavcodec-dev libavformat-dev libavutil-dev libswresample-dev \
-            jq python3 ffmpeg
+          sudo apt-get install -y jq ffmpeg unzip curl
 
-      - name: Build vgmstream (CLI)
+      # 🔹 vgmstream 최신 릴리스에서 리눅스 CLI 바이너리 자동 다운로드
+      - name: Download vgmstream-cli (prebuilt)
         run: |
           set -e
-          git clone --depth=1 https://github.com/vgmstream/vgmstream.git
-          cd vgmstream
-          make -j"$(nproc)" CFLAGS="-O2"           # 라이브러리 빌드
-          make -C cli -j"$(nproc)"                 # 🔹 CLI 바이너리 빌드
-          cp cli/vgmstream-cli ../vgmstream-cli    # 🔹 올바른 경로에서 복사
-          cd ..
+          api="https://api.github.com/repos/vgmstream/vgmstream/releases/latest"
+          url=$(curl -sL "$api" | jq -r '.assets[] | select(.name|test("linux.*cli.*zip")) | .browser_download_url' | head -n1)
+          if [ -z "$url" ] || [ "$url" = "null" ]; then
+            echo "Could not find linux cli asset in latest release" >&2
+            exit 1
+          fi
+          echo "Downloading: $url"
+          curl -L "$url" -o vgmstream-linux-cli.zip
+          unzip -q vgmstream-linux-cli.zip -d vgmcli
+          # 흔한 구조: ./vgmstream-cli 또는 ./bin/vgmstream-cli
+          chmod +x vgmcli/vgmstream-cli 2>/dev/null || true
+          chmod +x vgmcli/bin/vgmstream-cli 2>/dev/null || true
+          # 사용 경로 통일
+          if [ -x vgmcli/vgmstream-cli ]; then
+            ln -s "$PWD/vgmcli/vgmstream-cli" ./vgmstream-cli
+          elif [ -x vgmcli/bin/vgmstream-cli ]; then
+            ln -s "$PWD/vgmcli/bin/vgmstream-cli" ./vgmstream-cli
+          else
+            echo "vgmstream-cli not found inside zip" >&2
+            ls -R vgmcli || true
+            exit 1
+          fi
           ./vgmstream-cli -h || true
 
       - name: Convert FSB -> WAV (flatten)
@@ -84,7 +98,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Auto: Convert Mojang FSB -> WAV + manifest"
+            git commit -m "Auto: Convert Mojang FSB -> WAV + manifest (prebuilt vgmstream)"
             git push
           fi
 
