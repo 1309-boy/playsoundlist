@@ -25,6 +25,8 @@
     .ctrl input[type="range"]{width:200px}
     .small{font-size:12px;color:var(--muted)}
     .pill{font-size:11px;padding:2px 8px;border-radius:9999px;background:var(--line)}
+    .pager{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between;margin:16px 0}
+    .pager .left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   </style>
 </head>
 <body>
@@ -37,13 +39,28 @@
       <input id="q" type="search" placeholder="검색: ui.loom / zombie / ambient …" />
       <button id="reload" class="btn">manifest 다시 불러오기</button>
     </div>
+
+    <div id="pager-top" class="pager" hidden>
+      <div class="left">
+        <button id="prevTop" class="btn">◀ 이전</button>
+        <button id="nextTop" class="btn">다음 ▶</button>
+      </div>
+      <div class="muted" id="infoTop"></div>
+    </div>
+
     <div id="list" class="list"></div>
+
+    <div id="pager-btm" class="pager" hidden>
+      <div class="left">
+        <button id="prevBtm" class="btn">◀ 이전</button>
+        <button id="nextBtm" class="btn">다음 ▶</button>
+      </div>
+      <div class="muted" id="infoBtm"></div>
+    </div>
   </main>
 
   <script type="module">
-    // ─────────────────────────────────────────────────────────────
-    // 0) 디코더 선택 로딩 (선택 사항)
-    // libs/fsb-decoder.js 가 있으면 import 시도 → decodeFsbToAudioBuffer 제공
+    // 0) 디코더 로드 (선택)
     let decodeFsbToAudioBuffer = null;
     const stateEl = document.getElementById('decoderState');
     try {
@@ -54,78 +71,108 @@
       } else {
         stateEl.textContent = 'Decoder: not found';
       }
-    } catch {
-      stateEl.textContent = 'Decoder: not found';
-    }
+    } catch { stateEl.textContent = 'Decoder: not found'; }
 
-    // ─────────────────────────────────────────────────────────────
     // 1) 유틸
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const cache = new Map(); // url -> AudioBuffer
     const semitoneToRate = st => Math.pow(2, st/12);
 
-    async function fetchJSON(url){
-      const r = await fetch(url, { cache: 'no-store' });
-      if(!r.ok) throw new Error('Fetch fail: '+url);
-      return await r.json();
-    }
-    async function fetchArrayBuffer(url){
-      const r = await fetch(url, { cache: 'force-cache' });
-      if(!r.ok) throw new Error('Fetch fail: '+url);
-      return await r.arrayBuffer();
-    }
+    async function fetchJSON(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('Fetch fail '+url); return r.json(); }
+    async function fetchArrayBuffer(url){ const r=await fetch(url,{cache:'force-cache'}); if(!r.ok) throw new Error('Fetch fail '+url); return r.arrayBuffer(); }
     async function getBufferFromFsb(url){
       if (cache.has(url)) return cache.get(url);
       if (!decodeFsbToAudioBuffer) throw new Error('FSB decoder not loaded');
       const ab = await fetchArrayBuffer(url);
       const buf = await decodeFsbToAudioBuffer(ctx, ab);
-      cache.set(url, buf);
-      return buf;
+      cache.set(url, buf); return buf;
     }
-    function playWithPitch(buf, rate=1){
-      const src = ctx.createBufferSource();
-      src.buffer = buf; src.playbackRate.value = rate;
-      src.connect(ctx.destination); src.start();
-      return src;
-    }
+    function playWithPitch(buf, rate=1){ const s=ctx.createBufferSource(); s.buffer=buf; s.playbackRate.value=rate; s.connect(ctx.destination); s.start(); return s; }
 
-    // ─────────────────────────────────────────────────────────────
-    // 2) manifest 로드 & 렌더
+    // 2) 상태/DOM
     const listEl = document.getElementById('list');
     const qEl = document.getElementById('q');
     const reloadEl = document.getElementById('reload');
 
-    let all = [];
+    const pagerTop = document.getElementById('pager-top');
+    const pagerBtm = document.getElementById('pager-btm');
+    const prevTop = document.getElementById('prevTop');
+    const nextTop = document.getElementById('nextTop');
+    const prevBtm = document.getElementById('prevBtm');
+    const nextBtm = document.getElementById('nextBtm');
+    const infoTop = document.getElementById('infoTop');
+    const infoBtm = document.getElementById('infoBtm');
+
+    const PAGE_SIZE = 100;
+    let all = [];        // 전체 manifest
+    let filtered = [];   // 검색 결과
+    let page = 1;        // 1-based
+
+    // 3) 데이터 로드
     async function load(){
       listEl.innerHTML = '<div class="muted">manifest 로딩 중…</div>';
       try{
         all = await fetchJSON('./sounds_flat/manifest.json'); // [{id,label,url,type}]
-        render(all);
+        applyFilter();
       }catch(e){
-        listEl.innerHTML = '<div class="muted">manifest를 불러오지 못했습니다.</div>';
         console.error(e);
+        listEl.innerHTML = '<div class="muted">manifest를 불러오지 못했습니다.</div>';
       }
     }
 
-    function render(items){
+    // 4) 필터 & 페이지네이션
+    function applyFilter(){
       const q = qEl.value.trim().toLowerCase();
-      const filtered = q ? items.filter(x =>
-        x.id.toLowerCase().includes(q) || x.label.toLowerCase().includes(q)
-      ) : items;
+      filtered = q
+        ? all.filter(x => {
+            const shortId = x.id.replace(/^minecraft:/,'');
+            return x.label.toLowerCase().includes(q) || shortId.toLowerCase().includes(q);
+          })
+        : all.slice();
+      page = 1;          // 검색 변경 시 1페이지로
+      render();
+    }
 
+    function totalPages(){ return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)); }
+    function pageSlice(){
+      const start = (page - 1) * PAGE_SIZE;
+      return filtered.slice(start, start + PAGE_SIZE);
+    }
+
+    function updatePager(){
+      const total = filtered.length;
+      const tp = totalPages();
+      const startIdx = (page - 1) * PAGE_SIZE + 1;
+      const endIdx = Math.min(total, page * PAGE_SIZE);
+      const text = `총 ${total.toLocaleString()}개 · ${page}/${tp} 페이지 · ${startIdx}–${endIdx}`;
+      infoTop.textContent = text;
+      infoBtm.textContent = text;
+
+      prevTop.disabled = prevBtm.disabled = (page <= 1);
+      nextTop.disabled = nextBtm.disabled = (page >= tp);
+
+      pagerTop.hidden = pagerBtm.hidden = (total <= PAGE_SIZE);
+    }
+
+    // 5) 렌더링
+    function render(){
+      updatePager();
+      const items = pageSlice();
       listEl.innerHTML = '';
       const frag = document.createDocumentFragment();
-      filtered.forEach(entry => frag.appendChild(makeRow(entry)));
+      items.forEach(entry => frag.appendChild(makeRow(entry)));
       listEl.appendChild(frag);
     }
 
     function makeRow(entry){
+      const shortId = entry.id.replace(/^minecraft:/,''); // 화면/복사에서 접두사 제거
+
       const wrap = document.createElement('div');
       wrap.className = 'row';
 
       const title = document.createElement('div');
       title.className = 'name';
-      title.textContent = `${entry.label}  (${entry.id})`;
+      title.textContent = entry.label || shortId; // (minecraft:~~) 표시 제거
       wrap.appendChild(title);
 
       const ctrl = document.createElement('div'); ctrl.className = 'ctrl';
@@ -152,7 +199,7 @@
         info.textContent = `${stVal} st`;
       }
       function syncFromSt(){
-        const r = semitoneToRate(parseInt(st.value,10));
+        const r = Math.pow(2, parseInt(st.value,10)/12);
         p.value = r.toFixed(2);
         pBox.value = r.toFixed(2);
         info.textContent = `${st.value} st`;
@@ -184,7 +231,7 @@
       copyBtn.addEventListener('click', async ()=>{
         const rate = parseFloat(p.value);
         const stVal = Math.round(12 * Math.log2(rate));
-        const cmd = `/playsound ${entry.id} @a ~ ~ ~ 1 ${rate.toFixed(2)} ${Math.max(0,stVal)}`;
+        const cmd = `/playsound ${shortId} @a ~ ~ ~ 1 ${rate.toFixed(2)} ${Math.max(0,stVal)}`; // minecraft: 제거
         try{
           await navigator.clipboard.writeText(cmd);
           copyBtn.textContent='Copied!'; setTimeout(()=>copyBtn.textContent='Copy /playsound',1200);
@@ -196,9 +243,15 @@
       return wrap;
     }
 
-    qEl.addEventListener('input', ()=> render(all));
+    // 6) 이벤트
+    qEl.addEventListener('input', applyFilter);
     reloadEl.addEventListener('click', load);
+    prevTop.addEventListener('click', ()=>{ if(page>1){ page--; render(); window.scrollTo({top:0,behavior:'smooth'});} });
+    nextTop.addEventListener('click', ()=>{ if(page<totalPages()){ page++; render(); window.scrollTo({top:0,behavior:'smooth'});} });
+    prevBtm.addEventListener('click', ()=>{ if(page>1){ page--; render(); window.scrollTo({top:0,behavior:'smooth'});} });
+    nextBtm.addEventListener('click', ()=>{ if(page<totalPages()){ page++; render(); window.scrollTo({top:0,behavior:'smooth'});} });
 
+    // 시작
     load();
   </script>
 </body>
