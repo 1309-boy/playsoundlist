@@ -3,161 +3,244 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bedrock Playsound 리스트</title>
+  <title>Minecraft Bedrock Playsound List</title>
   <style>
-    :root { --fg:#111; --muted:#666; --bg:#fff; --line:#e7e7e7; }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--fg); background:var(--bg);}
-    header { padding:16px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
-    h1 { font-size:18px; margin:0; }
-    #status { font-size:12px; color:var(--muted); }
-    .toolbar { padding:12px 16px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--line);}
-    input[type="search"]{ flex:1 1 260px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px; }
-    button { padding:8px 12px; border:1px solid var(--line); background:#f7f7f7; border-radius:8px; cursor:pointer; }
-    button:disabled{ opacity:.5; cursor:not-allowed; }
-    .count { font-size:12px; color:var(--muted); margin-left:auto; }
-    .list { padding:8px 16px 80px; }
-    .row { display:grid; grid-template-columns:minmax(200px,1fr) auto 220px auto; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line);}
-    .name { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-    .pitch-wrap { display:flex; align-items:center; gap:8px;}
-    .pitch-wrap input[type="range"]{ width:140px; }
-    .pitch-val { width:44px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; }
-    .empty { padding:40px 16px; color:var(--muted); text-align:center; }
-    .pager { display:flex; gap:6px; padding:12px 16px; border-top:1px solid var(--line); position:sticky; bottom:0; background:var(--bg);}
+    :root { color-scheme: light dark; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Noto Color Emoji, sans-serif; }
+    header { position: sticky; top:0; backdrop-filter: blur(6px); padding: 10px 16px; border-bottom: 1px solid #0003; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    header h1 { margin: 0 12px 0 0; font-size: 18px; }
+    header .meta { font-size: 13px; opacity: .8; }
+    #controls { margin-left:auto; display:flex; gap:8px; align-items:center; }
+    #search { padding:8px 10px; border:1px solid #0003; border-radius:8px; min-width:220px; }
+    #list { padding: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 12px; }
+    .card { border:1px solid #0003; border-radius: 12px; padding: 12px; display:flex; flex-direction:column; gap:10px; }
+    .title { font-weight: 600; font-size: 14px; word-break: break-all; }
+    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    button { padding:8px 12px; border-radius:10px; border:1px solid #0003; cursor:pointer; }
+    .small { font-size:12px; opacity:.75; }
+    .pagination { display:flex; gap:6px; padding: 10px 16px 20px; align-items:center; flex-wrap:wrap; }
+    .pagination button[disabled] { opacity:.4; cursor: default; }
+    .range { width: 160px; }
+    footer { padding: 16px; font-size:12px; opacity:.65; text-align:center; }
   </style>
 </head>
 <body>
   <header>
-    <h1>Bedrock Playsound 리스트</h1>
-    <span id="status" aria-live="polite">Decoder: <strong>loaded</strong></span>
+    <h1>Playsound 리스트</h1>
+    <div class="meta"><span id="count">—</span></div>
+    <div id="controls">
+      <input id="search" type="search" placeholder="이벤트 이름 검색 (예: beacon.power, block.mud.hit)" />
+      <span class="small">페이지당 100개</span>
+    </div>
   </header>
 
-  <div class="toolbar">
-    <input id="q" type="search" placeholder="검색: ui.loom / zombie / ambient …" />
-    <button id="reload">manifest 다시 불러오기</button>
-    <span class="count" id="meta"></span>
-  </div>
+  <div id="list"></div>
+  <div class="pagination" id="pager"></div>
+  <footer>Bedrock sound_definitions 기반 • 변종 파일(1,2,3…)은 한 항목으로 묶여 랜덤 재생</footer>
 
-  <div class="list" id="list"></div>
+  <script>
+  // ====== 설정 ======
+  const PAGE_SIZE = 100;
+  // sound_definitions 파일(.json 권장, .txt도 지원)
+  const DEF_URLS = ["sound_definitions.json", "sound_definitions.txt"];
+  // 실제 wav 파일의 루트(prefix)
+  const WAV_PREFIX = "sounds_flat/"; // 결과적으로 WAV URL은: sounds_flat + (definition.name) + ".wav"
 
-  <div class="pager">
-    <button id="prev">&lt; 이전</button>
-    <button id="next">다음 &gt;</button>
-  </div>
+  // ====== 유틸 ======
+  const $ = (sel) => document.querySelector(sel);
+  const listEl = $("#list");
+  const countEl = $("#count");
+  const pagerEl = $("#pager");
+  const searchEl = $("#search");
 
-<script>
-const MANIFEST_URL = 'sounds_flat/manifest.json';
-const PAGE_SIZE = 100;
-let manifest = { entries: [] };
-let filtered = [];
-let page = 0;
-let audioCtx;
+  let events = [];       // [{label, variants: [wavUrl, ...]}]
+  let filtered = [];     // 검색/정렬 후
+  let page = 1;
 
-const $ = sel => document.querySelector(sel);
-const fmt = n => n.toLocaleString();
-
-/* === 데이터 로드 === */
-async function loadManifest() {
-  const res = await fetch(MANIFEST_URL, { cache: 'no-store' });
-  if (!res.ok) throw new Error('manifest fetch failed: ' + res.status);
-  manifest = await res.json();
-  manifest.entries.forEach(e => {
-    e._label = (e.label || e.id || '').replace(/^minecraft:/, '');
-  });
-  applyFilter();
-}
-
-/* === 검색/페이지 === */
-function applyFilter() {
-  const q = $('#q').value.trim().toLowerCase();
-  filtered = !q ? manifest.entries : manifest.entries.filter(e => e._label.toLowerCase().includes(q));
-  page = 0;
-  render();
-}
-
-function slicePage() {
-  const start = page * PAGE_SIZE;
-  return filtered.slice(start, start + PAGE_SIZE);
-}
-
-/* === 렌더링 === */
-function render() {
-  $('#meta').textContent =
-    `총 ${fmt(filtered.length)}개 · ${fmt(page+1)}/${Math.max(1, Math.ceil(filtered.length/PAGE_SIZE))} 페이지`;
-  const chunk = slicePage();
-  const root = $('#list');
-  root.innerHTML = '';
-
-  if (chunk.length === 0) {
-    root.innerHTML = `<div class="empty">표시할 사운드가 없습니다.</div>`;
-    $('#prev').disabled = true; $('#next').disabled = true;
-    return;
+  function paginate(arr, pageSize, pageNum) {
+    const start = (pageNum - 1) * pageSize;
+    return arr.slice(start, start + pageSize);
   }
 
-  for (const item of chunk) {
-    const row = document.createElement('div');
-    row.className = 'row';
+  function renderPager() {
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    page = Math.min(page, totalPages);
 
-    const name = document.createElement('div');
-    name.className = 'name';
-    name.textContent = item._label;
+    pagerEl.innerHTML = "";
+    const mkBtn = (txt, disabled, onClick) => {
+      const b = document.createElement("button");
+      b.textContent = txt;
+      if (disabled) b.disabled = true;
+      if (onClick) b.addEventListener("click", onClick);
+      return b;
+    };
+    pagerEl.appendChild(mkBtn("⟨ 이전", page <= 1, () => { page--; render(); }));
+    const label = document.createElement("span");
+    label.className = "small";
+    label.textContent = `페이지 ${page} / ${totalPages}`;
+    pagerEl.appendChild(label);
+    pagerEl.appendChild(mkBtn("다음 ⟩", page >= totalPages, () => { page++; render(); }));
+  }
 
-    const pitchWrap = document.createElement('div');
-    pitchWrap.className = 'pitch-wrap';
-    const label = document.createElement('span');
-    label.textContent = 'Pitch';
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = '0.1';
-    slider.max = '2.0';
-    slider.step = '0.1';
-    slider.value = '1.0';
-    const val = document.createElement('span');
-    val.className = 'pitch-val';
-    val.textContent = '1.0×';
-    slider.addEventListener('input', () => {
-      val.textContent = Number(slider.value).toFixed(1) + '×';
+  function createCard(ev) {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = ev.label; // minecraft: 접두사 없는 이벤트 이름
+    card.appendChild(title);
+
+    const row = document.createElement("div");
+    row.className = "row";
+
+    const playBtn = document.createElement("button");
+    playBtn.textContent = "▶ 재생";
+    row.appendChild(playBtn);
+
+    const stopBtn = document.createElement("button");
+    stopBtn.textContent = "■ 정지";
+    row.appendChild(stopBtn);
+
+    const pitchWrap = document.createElement("div");
+    pitchWrap.className = "row";
+    const pitchLabel = document.createElement("span");
+    pitchLabel.className = "small";
+    pitchLabel.textContent = "피치: ";
+    const range = document.createElement("input");
+    range.className = "range";
+    range.type = "range";
+    range.min = "0.1";
+    range.max = "2.0";
+    range.step = "0.1";
+    range.value = "1.0";
+    const pv = document.createElement("span");
+    pv.className = "small";
+    pv.textContent = "1.0";
+    pitchWrap.appendChild(pitchLabel);
+    pitchWrap.appendChild(range);
+    pitchWrap.appendChild(pv);
+
+    card.appendChild(row);
+    card.appendChild(pitchWrap);
+
+    // 오디오 엘리먼트는 필요할 때만(src 교체 후 재생)
+    const audio = new Audio();
+    audio.preload = "none";
+    // 재생 속도 = 피치
+    range.addEventListener("input", () => {
+      pv.textContent = range.value;
+      audio.playbackRate = parseFloat(range.value);
     });
-    pitchWrap.append(label, slider, val);
 
-    const playBtn = document.createElement('button');
-    playBtn.textContent = '▶ Play';
-    playBtn.addEventListener('click', () => play(item.url, Number(slider.value)));
+    playBtn.addEventListener("click", async () => {
+      try {
+        // 변종 중 하나를 선택 (가급적 랜덤)
+        const choice = ev.variants[Math.floor(Math.random() * ev.variants.length)] || ev.variants[0];
+        if (!choice) return;
+        // 동일 소스 연속 재생 시 로딩 스킵용
+        if (audio.src !== (location.origin + "/" + choice) && audio.src !== new URL(choice, location.href).href) {
+          audio.src = choice;
+        }
+        audio.playbackRate = parseFloat(range.value);
+        await audio.play();
+      } catch (e) {
+        console.error("재생 실패:", e);
+        alert("재생에 실패했어요. 파일 경로나 브라우저 정책을 확인해 주세요.");
+      }
+    });
 
-    row.append(name, pitchWrap, playBtn);
-    root.appendChild(row);
+    stopBtn.addEventListener("click", () => {
+      audio.pause();
+      audio.currentTime = 0;
+    });
+
+    return card;
   }
 
-  $('#prev').disabled = (page === 0);
-  $('#next').disabled = ((page+1)*PAGE_SIZE >= filtered.length);
-}
+  function render() {
+    // 검색
+    const q = (searchEl.value || "").trim().toLowerCase();
+    filtered = events.filter(ev => !q || ev.label.toLowerCase().includes(q));
 
-/* === 재생 === */
-async function play(url, pitch=1.0) {
-  try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('오디오 파일을 불러오지 못했습니다: ' + res.status);
-    const buf = await res.arrayBuffer();
-    const audioBuffer = await audioCtx.decodeAudioData(buf);
-    const src = audioCtx.createBufferSource();
-    src.buffer = audioBuffer;
-    src.playbackRate.value = Math.min(2.0, Math.max(0.1, pitch));
-    src.connect(audioCtx.destination);
-    src.start(0);
-  } catch (err) {
-    alert('재생 실패: ' + err.message);
-    console.error(err);
+    // 정렬 (이름 오름차순)
+    filtered.sort((a, b) => a.label.localeCompare(b.label, 'en'));
+
+    countEl.textContent = `총 ${filtered.length}개 이벤트`;
+    renderPager();
+
+    // 페이지
+    const pageItems = paginate(filtered, PAGE_SIZE, page);
+    listEl.innerHTML = "";
+    pageItems.forEach(ev => listEl.appendChild(createCard(ev)));
   }
-}
 
-/* === 이벤트 === */
-$('#q').addEventListener('input', () => applyFilter());
-$('#prev').addEventListener('click', () => { if (page>0){ page--; render(); } });
-$('#next').addEventListener('click', () => { if ((page+1)*PAGE_SIZE < filtered.length){ page++; render(); } });
-$('#reload').addEventListener('click', () => loadManifest().catch(e => alert('manifest 로드 실패\n' + e.message)));
+  searchEl.addEventListener("input", () => { page = 1; render(); });
 
-loadManifest().catch(e => alert('manifest 로드 실패\n' + e.message));
-</script>
+  // ====== sound_definitions 로드 & 변환 ======
+  async function loadDefinitions() {
+    // .json → 실패하면 .txt 순서로 시도
+    let raw;
+    let lastErr;
+    for (const url of DEF_URLS) {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(res.status + " " + res.statusText);
+        raw = await res.text();
+        // 비어있지 않으면 파싱 시도
+        const data = JSON.parse(raw);
+        return data;
+      } catch (e) {
+        lastErr = e;
+        // 다음 후보 시도
+      }
+    }
+    throw lastErr || new Error("sound_definitions 파일을 불러오지 못했습니다.");
+  }
+
+  function normalizeSoundEntry(entry) {
+    // entry는 문자열 또는 { name: "sounds/...", ... }
+    if (typeof entry === "string") return entry;
+    if (entry && typeof entry === "object" && entry.name) return entry.name;
+    return null;
+  }
+
+  function buildEvents(defJson) {
+    // defJson 구조: { format_version, sound_definitions: { "<label>": { sounds: [ ... ] }, ... } }
+    const defs = defJson && (defJson.sound_definitions || defJson);
+    const out = [];
+    for (const [label, def] of Object.entries(defs)) {
+      const arr = (def && def.sounds) || [];
+      const variants = [];
+      for (const ent of arr) {
+        const name = normalizeSoundEntry(ent);
+        if (!name) continue;
+        // 실제 wav 경로 만들기: sounds_flat/ + name + ".wav"
+        // 예) name="sounds/block/loom/take_result1" → "sounds_flat/sounds/block/loom/take_result1.wav"
+        const wav = WAV_PREFIX + name + ".wav";
+        variants.push(wav);
+      }
+      // 변종이 하나도 없으면 표시 스킵(재생 불가)
+      if (variants.length > 0) {
+        // minecraft: 접두사는 원래 definitions key엔 거의 없지만 혹시 몰라 제거
+        const niceLabel = label.startsWith("minecraft:") ? label.slice("minecraft:".length) : label;
+        out.push({ label: niceLabel, variants });
+      }
+    }
+    return out;
+  }
+
+  (async function init() {
+    try {
+      const def = await loadDefinitions();
+      events = buildEvents(def);
+      render();
+    } catch (e) {
+      console.error(e);
+      alert("sound_definitions 로드에 실패했어요. 파일이 루트에 있고 JSON형식인지 확인해 주세요.");
+    }
+  })();
+  </script>
 </body>
 </html>
