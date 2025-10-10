@@ -227,11 +227,19 @@ function nextUrlFor(key){
 }
 
 async function playKey(key,btn){
-  if(currentAudio){
-    try{ currentAudio.pause(); currentAudio.currentTime=0; }catch(e){}
-    if(currentPlayBtn)currentPlayBtn.classList.remove('playing');
-    currentAudio=null; currentKey=null; currentPlayBtn=null;
+  // stop any currently playing sound & reset button
+if (currentAudio) {
+  try { 
+    currentAudio.pause(); 
+    currentAudio.currentTime = 0; 
+  } catch(e){}
+  if (currentPlayBtn) {
+    currentPlayBtn.classList.remove('playing');
   }
+  currentAudio = null;
+  currentKey = null;
+  currentPlayBtn = null;
+}
 
   const url=nextUrlFor(key);
   if(!url||!inManifest(url)){ console.warn('Sound not found or not in manifest:',key); return; }
@@ -252,10 +260,11 @@ async function playKey(key,btn){
   try{
     if(!audioUnlocked)await unlockAudio();
     await audio.play();
-  }catch(err){
-    btn.classList.remove('playing');
-    currentAudio=null; currentKey=null; currentPlayBtn=null;
-  }
+ }catch(err){    
+  console.debug('play() failed:', err?.name || err);    
+  if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
+  currentAudio = null; currentKey = null; currentPlayBtn = null;
+}
 }
 
 function stopKey(key){
