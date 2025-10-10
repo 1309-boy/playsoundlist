@@ -2,203 +2,248 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Playsound 리스트</title>
   <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      background: #111;
-      color: #ddd;
-      margin: 0;
-      padding: 10px;
-    }
-    h1 { font-size: 1.4em; margin-bottom: 10px; }
-    input, button { font-size: 1em; }
-    .sound { background: #222; margin: 6px 0; padding: 8px; border-radius: 6px; }
-    .title { font-weight: bold; color: #fff; margin-bottom: 6px; }
-    .pitch-control { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-    input[type=range] { flex: 1; }
-    .controls { margin-top: 6px; }
-    button { background: #444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
-    button:hover { background: #666; }
-    .top-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+    :root { color-scheme: dark; }
+    body { margin:0; padding:12px; background:#111; color:#e6e6e6; font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    h1 { font-size:18px; margin:6px 0 10px; }
+    .top { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+    input[type=text]{ padding:8px 10px; border-radius:6px; border:1px solid #333; background:#1b1b1b; color:#eee; min-width:260px; }
+    button{ background:#2f2f2f; color:#fff; border:1px solid #3a3a3a; border-radius:6px; padding:7px 10px; cursor:pointer; }
+    button:hover{ background:#414141; }
+    .card{ background:#1a1a1a; border:1px solid #2a2a2a; border-radius:10px; padding:10px; margin:8px 0; }
+    .title{ font-weight:700; color:#fff; margin-bottom:6px; word-break:break-all;}
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .pitch{ display:flex; align-items:center; gap:8px; margin-top:6px; }
+    input[type=range]{ width:260px; }
+    select{ background:#262626; color:#fff; border:1px solid #3a3a3a; border-radius:6px; padding:6px; }
+    .foot{ margin-top:10px; display:flex; gap:8px; align-items:center; }
+    .muted{ opacity:.7; font-size:12px; }
   </style>
 </head>
 <body>
-  <h1>Playsound 리스트 <span id="total"></span></h1>
-  <div class="top-bar">
-    <input id="search" placeholder="이벤트 이름 검색 (예: beacon.power, ui.loom ...)" />
+  <h1>Playsound 리스트 <span id="total" class="muted"></span></h1>
+
+  <div class="top">
+    <input id="q" type="text" placeholder="이벤트 이름 검색 (예: beacon.power, ui.loom …)" />
     <button id="reload">manifest 다시 불러오기</button>
+    <span id="decoder" class="muted">Decoder: loaded</span>
   </div>
 
   <div id="list"></div>
 
-  <div style="margin-top:10px;">
+  <div class="foot">
     <button id="prev">◀ 이전</button>
     <button id="next">다음 ▶</button>
-    <span id="pageinfo"></span>
+    <span id="pageinfo" class="muted"></span>
   </div>
 
-  <p id="decoderStatus" style="opacity:0.6;font-size:0.9em;">Decoder: loaded</p>
-
-  <script>
-  const BASE = window.location.pathname.replace(/\/[^/]*$/, '');
-  const DEFINITIONS_URL = `${BASE}/sound_definitions.txt`;
-  const MANIFEST_URL = `${BASE}/manifest.json`;
+<script>
+(() => {
+  const BASE = window.location.pathname.replace(/\/[^/]*$/, '');        // /playsoundlist
+  const URLS = {
+    defsJson: `${BASE}/sound_definitions.json`,
+    defsTxt : `${BASE}/sound_definitions.txt`,
+    manifest: `${BASE}/manifest.json`,
+  };
   const PAGE_SIZE = 100;
-  const listDiv = document.getElementById('list');
-  const searchInput = document.getElementById('search');
-  const pageInfo = document.getElementById('pageinfo');
-  const totalSpan = document.getElementById('total');
-  const state = { items: [], filtered: [], page: 1, audio:null };
 
-  async function loadText(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(res.status);
-    return await res.text();
-  }
-  async function loadJSON(url) {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(res.status);
-    return await res.json();
-  }
+  const $list = document.getElementById('list');
+  const $q = document.getElementById('q');
+  const $total = document.getElementById('total');
+  const $pageinfo = document.getElementById('pageinfo');
 
-  async function loadAll(){
-    try{
-      const text = await loadText(DEFINITIONS_URL);
-      const parsed = parseDefinitions(text);
-      if (parsed.length > 0) {
-        state.items = parsed;
-      } else {
-        const man = await loadJSON(MANIFEST_URL);
-        state.items = buildFromManifest(man);
-      }
-    }catch{
-      const man = await loadJSON(MANIFEST_URL);
-      state.items = buildFromManifest(man);
+  const state = {
+    items: [],      // [{ eventId, title, files:[{label,url},...] }]
+    filtered: [],
+    page: 1,
+    audio: null
+  };
+
+  // ---------- utils ----------
+  const fetchJSON = async (url) => {
+    const r = await fetch(url, {cache:'no-store'});
+    if (!r.ok) throw new Error(String(r.status));
+    return r.json();
+  };
+  const fetchText = async (url) => {
+    const r = await fetch(url, {cache:'no-store'});
+    if (!r.ok) throw new Error(String(r.status));
+    return r.text();
+  };
+  const toWavUrl = (name) => {
+    // input: "sounds/ambient/underwater/exit1" or "ambient/xyz/foo1.wav"
+    let p = name.replace(/^(\.\/)?/,'');
+    if (p.startsWith('sounds/')) p = p.slice(7);              // drop "sounds/"
+    if (p.startsWith('sounds_flat/')) p = p.slice(12);
+    if (!p.endsWith('.wav')) p += '.wav';
+    return `${BASE}/sounds_flat/${p}`;
+  };
+
+  // ---------- loaders ----------
+  async function loadFromSoundDefsJSON() {
+    const obj = await fetchJSON(URLS.defsJson);               // top-level { "ambient.underwater.exit": { sounds:[{name:"sounds/..."}] }, ... }
+    const items = [];
+    for (const [eventId, def] of Object.entries(obj)) {
+      const sounds = Array.isArray(def?.sounds) ? def.sounds : [];
+      const files = sounds
+        .map(s => s?.name)
+        .filter(Boolean)
+        .map(name => ({ label: name.split('/').pop(), url: toWavUrl(name) }));
+      if (files.length) items.push({ eventId, title: eventId, files });
     }
-
-    state.filtered = state.items.slice();
-    totalSpan.textContent = `총 ${state.items.length}개 이벤트`;
-    state.page = 1;
-    render();
+    items.sort((a,b) => a.title.localeCompare(b.title, 'en'));
+    return items;
   }
 
-  function parseDefinitions(text){
-    text = text.replace(/^\uFEFF/, '');
+  function parseDefsTxt(txt) {
+    // 지원:  "path -> eventId"  또는  "eventId = path1, path2 | path3"
+    txt = txt.replace(/^\uFEFF/,'');
     const map = new Map();
-    for (const raw of text.split(/\r?\n/)) {
+    for (const raw of txt.split(/\r?\n/)) {
       let line = raw.trim();
       if (!line || line.startsWith('#') || line.startsWith('//')) continue;
-      line = line.replace(/\s*(#|\/\/).*$/, '').trim();
+      line = line.replace(/\s*(#|\/\/).*$/,'').trim();
       if (!line) continue;
 
       if (line.includes('->')) {
         const [lhs, rhs] = line.split('->').map(s=>s.trim());
         if (!lhs || !rhs) continue;
-        const path = lhs.replace(/^(\.\/)?(sounds_flat\/)?/,'');
         const eventId = rhs.replace(/^minecraft:/,'');
-        if (!map.has(eventId)) map.set(eventId,new Set());
-        map.get(eventId).add(path);
+        const name = lhs.replace(/^(\.\/)?/,'');
+        if (!map.has(eventId)) map.set(eventId, new Set());
+        map.get(eventId).add(name);
         continue;
       }
-
       if (line.includes('=')) {
         const [lhs, rhs] = line.split('=').map(s=>s.trim());
         if (!lhs || !rhs) continue;
         const eventId = lhs.replace(/^minecraft:/,'');
-        const parts = rhs.split(/[,\|]/).map(s=>s.trim()).filter(Boolean);
-        if (!map.has(eventId)) map.set(eventId,new Set());
+        const names = rhs.split(/[,\|]/).map(s=>s.trim()).filter(Boolean);
+        if (!map.has(eventId)) map.set(eventId, new Set());
         const set = map.get(eventId);
-        parts.forEach(p => set.add(p.replace(/^(\.\/)?(sounds_flat\/)?/,'') ));
-        continue;
+        names.forEach(n => set.add(n));
       }
     }
-    const items=[];
+    const items = [];
     for (const [eventId, set] of map) {
-      const files = [...set].map(p => ({
-        url: normalizePath(p),
-        label: p.split('/').pop()
-      }));
-      items.push({eventId, title: labelFromEventId(eventId), files});
+      const files = [...set].map(n => ({ label: n.split('/').pop(), url: toWavUrl(n) }));
+      if (files.length) items.push({ eventId, title: eventId, files });
     }
+    items.sort((a,b) => a.title.localeCompare(b.title,'en'));
+    return items;
+  }
+
+  async function loadFromManifest() {
+    const man = await fetchJSON(URLS.manifest);               // fallback
+    const items = (man.entries || []).map(e => ({
+      eventId: e.id?.replace(/^minecraft:/,'') || e.label || e.url,
+      title: e.id?.replace(/^minecraft:/,'') || e.label || e.url,
+      files: [{ label: e.url.split('/').pop(), url: `${BASE}/${e.url}` }]
+    }));
     items.sort((a,b)=>a.title.localeCompare(b.title,'en'));
     return items;
   }
 
-  function normalizePath(p){
-    if (!p.endsWith('.wav')) return `${BASE}/sounds_flat/${p}.wav`;
-    return `${BASE}/sounds_flat/${p}`;
+  async function loadAll() {
+    try {
+      // 1) JSON 우선
+      state.items = await loadFromSoundDefsJSON();
+    } catch {
+      try {
+        // 2) TXT 시도
+        const txt = await fetchText(URLS.defsTxt);
+        state.items = parseDefsTxt(txt);
+      } catch {
+        // 3) 마지막으로 manifest
+        state.items = await loadFromManifest();
+      }
+    }
+    state.filtered = state.items.slice();
+    state.page = 1;
+    $total.textContent = `총 ${state.items.length}개 이벤트`;
+    render();
   }
 
-  function buildFromManifest(man){
-    const arr = man.entries?.map(e=>({
-      eventId: e.id?.replace(/^minecraft:/,'') || e.label || e.url,
-      title: e.label || e.id || e.url,
-      files: [{url: `${BASE}/${e.url}`, label: e.url.split('/').pop()}]
-    })) || [];
-    arr.sort((a,b)=>a.title.localeCompare(b.title,'en'));
-    return arr;
-  }
+  // ---------- UI ----------
+  function render() {
+    const start = (state.page-1) * PAGE_SIZE;
+    const slice = state.filtered.slice(start, start + PAGE_SIZE);
 
-  function labelFromEventId(id){
-    return id.replace(/^minecraft:/,'');
-  }
+    $list.innerHTML = '';
+    for (const s of slice) {
+      const card = document.createElement('div');
+      card.className = 'card';
 
-  function render(){
-    const start=(state.page-1)*PAGE_SIZE, end=start+PAGE_SIZE;
-    const slice=state.filtered.slice(start,end);
-    listDiv.innerHTML='';
-    for (const s of slice){
-      const div=document.createElement('div');
-      div.className='sound';
-      div.innerHTML=`
+      const fileOptions = s.files.map((f,i)=>`<option value="${i}">${f.label}</option>`).join('');
+      card.innerHTML = `
         <div class="title">${s.title}</div>
-        <div class="controls">
+        <div class="row">
           <button class="play">▶ 재생</button>
           <button class="stop">■ 정지</button>
+          ${s.files.length>1 ? `<select class="variant">${fileOptions}</select>` : `<span class="muted">단일 변형</span>`}
         </div>
-        <div class="pitch-control">
-          <label>피치:</label>
-          <input type="range" min="0.1" max="2.0" step="0.1" value="1" class="pitch">
+        <div class="pitch">
+          <span>피치:</span>
+          <input class="rate" type="range" min="0.1" max="2.0" step="0.1" value="1.0" />
           <span class="pval">1.0</span>
-        </div>`;
-      listDiv.appendChild(div);
+        </div>
+      `;
+      $list.appendChild(card);
 
-      const playBtn=div.querySelector('.play');
-      const stopBtn=div.querySelector('.stop');
-      const pitch=div.querySelector('.pitch');
-      const pval=div.querySelector('.pval');
-      playBtn.onclick=()=>play(s.files[0].url,parseFloat(pitch.value));
-      stopBtn.onclick=()=>{if(state.audio){state.audio.pause();state.audio=null}};
-      pitch.oninput=()=>pval.textContent=pitch.value;
+      const rate = card.querySelector('.rate');
+      const pval = card.querySelector('.pval');
+      rate.oninput = () => pval.textContent = rate.value;
+
+      const select = card.querySelector('.variant');
+      const getUrl = () => {
+        const idx = select ? Number(select.value) : 0;
+        return s.files[idx].url;
+      };
+
+      const playBtn = card.querySelector('.play');
+      const stopBtn = card.querySelector('.stop');
+
+      playBtn.onclick = async () => {
+        try {
+          if (state.audio) { state.audio.pause(); state.audio=null; }
+          const a = new Audio(getUrl());
+          a.preservesPitch = false;
+          a.playbackRate = parseFloat(rate.value);
+          await a.play();
+          state.audio = a;
+        } catch (e) {
+          alert(`재생 실패: ${e.message}\n원인 URL: ${getUrl()}`);
+        }
+      };
+      stopBtn.onclick = () => { if (state.audio) { state.audio.pause(); state.audio=null; } };
     }
-    pageInfo.textContent=`총 ${state.filtered.length}개 / ${Math.ceil(state.filtered.length/PAGE_SIZE)}페이지 중 ${state.page}페이지`;
+
+    const totalPages = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
+    $pageinfo.textContent = `총 ${totalPages} 페이지 / 현재 ${state.page} 페이지`;
   }
 
-  async function play(url,rate){
-    try{
-      if(state.audio){state.audio.pause();}
-      const audio=new Audio(url);
-      audio.preservesPitch=false;
-      audio.playbackRate=rate;
-      await audio.play();
-      state.audio=audio;
-    }catch(err){
-      alert(`재생 실패: ${err.message}\nURL: ${url}`);
-    }
-  }
-
-  searchInput.addEventListener('input',()=>{
-    const q=searchInput.value.toLowerCase();
-    state.filtered=state.items.filter(s=>s.title.toLowerCase().includes(q));
-    state.page=1; render();
+  // 검색
+  document.getElementById('q').addEventListener('input', (e)=>{
+    const q = e.target.value.trim().toLowerCase();
+    state.filtered = q ? state.items.filter(x => x.title.toLowerCase().includes(q)) : state.items.slice();
+    state.page = 1;
+    render();
   });
-  document.getElementById('next').onclick=()=>{if(state.page*PAGE_SIZE<state.filtered.length){state.page++;render();}};
-  document.getElementById('prev').onclick=()=>{if(state.page>1){state.page--;render();}};
-  document.getElementById('reload').onclick=()=>loadAll();
 
+  document.getElementById('next').onclick = () => {
+    const totalPages = Math.ceil(state.filtered.length / PAGE_SIZE);
+    if (state.page < totalPages) { state.page++; render(); }
+  };
+  document.getElementById('prev').onclick = () => {
+    if (state.page > 1) { state.page--; render(); }
+  };
+  document.getElementById('reload').onclick = loadAll;
+
+  // 첫 로드
   loadAll();
-  </script>
+})();
+</script>
 </body>
 </html>
