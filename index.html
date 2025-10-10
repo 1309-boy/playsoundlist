@@ -1,15 +1,13 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bedrock Edition Playsound 리스트</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Playsound 리스트</title>
 <style>
-  :root{
-    --bg:#111; --fg:#e8e8e8; --muted:#9aa3ad; --card:#1b1b1b; --btn:#2a2a2a; --btn2:#3a3a3a; --accent:#5aa9ff;
-  }
+  :root{--bg:#111;--fg:#e8e8e8;--muted:#9aa3ad;--card:#1b1b1b;--btn:#2a2a2a;--btn2:#3a3a3a}
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
   header{display:flex;align-items:center;gap:.75rem;padding:.9rem 1rem;border-bottom:1px solid #222}
   h1{font-size:16px;margin:0}
   .meta{opacity:.8}
@@ -34,12 +32,11 @@
   <h1>Playsound 리스트</h1>
   <div class="meta" id="total"></div>
   <div class="grow"></div>
-  <!-- manifest 버튼 제거 -->
 </header>
 
 <main>
   <div class="toolbar">
-    <input id="q" type="search" placeholder="이벤트 이름 검색 (예: beacon.pow, ui.loom …)" />
+    <input id="q" type="search" placeholder="이벤트 이름 검색 (예: beacon.pow, ui.loom …)"/>
     <select id="pagesize" title="페이지당 개수">
       <option>50</option><option selected>100</option><option>150</option><option>200</option>
     </select>
@@ -64,231 +61,196 @@
 
 <script>
 /* -------------------------- 경로/상수 -------------------------- */
-const MANIFEST_URL     = './sounds_flat/manifest.json';
-const DEFINITIONS_URL  = './sound_definitions.json';
-const WAV_PREFIX       = './sounds_flat/';
+const MANIFEST_URL    = './sounds_flat/manifest.json';
+const DEFINITIONS_URL = './sound_definitions.json';
+const WAV_PREFIX      = './sounds_flat/';
 
 /* -------------------------- 전역 상태 -------------------------- */
 const state = {
-  items: [],
-  filtered: [],
-  page: 1,
-  pageSize: parseInt(localStorage.getItem('pagesize') || '100', 10),
-  manifestSet: new Set(),
-  itemsByName: new Map()
+  items: [], filtered: [], page: 1,
+  pageSize: parseInt(localStorage.getItem('pagesize')||'100',10),
+  manifestSet: new Set(), itemsByName: new Map()
 };
+const $  = s=>document.querySelector(s);
 
-/* -------------------------- 유틸 -------------------------- */
-const $  = sel => document.querySelector(sel);
-const $$ = sel => document.querySelectorAll(sel);
+/* -------------------------- WebAudio 플레이어 -------------------------- */
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+let current = { name:null, source:null, gain:null };
+const bufferCache = new Map();              // url -> Promise<AudioBuffer>
+const nextIndexByName = new Map();          // 라운드로빈 인덱스
 
-function normalizeDefSound(s){ return typeof s === 'string' ? { name:s } : (s||{}); }
-function toWavUrl(soundName){ return WAV_PREFIX + soundName.replace(/^sounds\//,'') + '.wav'; }
+async function getBuffer(url){
+  if(!bufferCache.has(url)){
+    const p = (async ()=>{
+      const r = await fetch(url,{cache:'force-cache'});
+      if(!r.ok) throw new Error(`파일 로드 실패: ${r.status} ${url}`);
+      const ab = await r.arrayBuffer();
+      return await audioCtx.decodeAudioData(ab);
+    })();
+    bufferCache.set(url,p);
+  }
+  return bufferCache.get(url);
+}
+function stopPlaying(){
+  if(current.source){
+    try{ current.source.stop(0); }catch{}
+  }
+  current = { name:null, source:null, gain:null };
+  document.querySelectorAll('.play-btn[data-playing="1"]').forEach(btn=>{
+    btn.dataset.playing='0'; btn.textContent='▶ 재생';
+  });
+}
+function nextUrl(it){
+  const n = it.files.length;
+  if(n===1) return it.files[0];
+  const idx = nextIndexByName.get(it.name) ?? 0;
+  nextIndexByName.set(it.name, (idx+1)%n);
+  return it.files[idx % n];
+}
+async function playItem(it, pitch, forceNext=false){
+  // 다른 소리 재생 중이면 정지
+  if(current.name && current.name!==it.name) stopPlaying();
+
+  const url = (forceNext || current.name!==it.name) ? nextUrl(it) : nextUrl(it);
+  const buffer = await getBuffer(url);
+
+  // 새 소스/게인 노드
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  source.playbackRate.value = pitch || 1.0;
+
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.9;                    // 약간 낮춰 클리핑 방지
+
+  // (선택) 속도가 빨라질 때 고역 에일리어싱 줄이는 로우패스
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = Math.min( audioCtx.sampleRate/2, 12000 * (pitch||1) );
+  lp.Q.value = 0.707;
+
+  source.connect(lp);
+  lp.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  source.onended = ()=> stopPlaying();
+  current = { name:it.name, source, gain };
+  source.start(0);
+}
 
 /* -------------------------- 데이터 로딩 -------------------------- */
 async function loadManifest(){
-  const r = await fetch(MANIFEST_URL, {cache:'no-store'});
+  const r = await fetch(MANIFEST_URL,{cache:'no-store'});
   if(!r.ok) throw new Error(`manifest 로드 실패: HTTP ${r.status}`);
   const j = await r.json();
   const urls = (j.entries||[]).map(e=>e.url).filter(Boolean);
   state.manifestSet = new Set(urls.map(u=>u.replace(/^\.\//,'')));
 }
-
 async function loadDefinitions(){
-  const r = await fetch(DEFINITIONS_URL, {cache:'no-store'});
+  const r = await fetch(DEFINITIONS_URL,{cache:'no-store'});
   if(!r.ok) throw new Error(`sound_definitions 로드 실패: HTTP ${r.status}`);
   const defsAll = await r.json();
   const defs = defsAll.sound_definitions || defsAll;
 
-  const items = [];
-  const map = new Map();
-
-  for(const [key, def] of Object.entries(defs)){
+  const items=[], map=new Map();
+  for(const [key,def] of Object.entries(defs)){
     if(!def || !Array.isArray(def.sounds)) continue;
     const files = def.sounds
-      .map(normalizeDefSound)
-      .map(s => s.name ? toWavUrl(s.name) : null)
+      .map(s=>typeof s==='string'?{name:s}:s)
+      .map(s=> s?.name ? (WAV_PREFIX + s.name.replace(/^sounds\//,'') + '.wav') : null)
       .filter(Boolean)
-      .filter(url => existsInManifest(url));
-    if(files.length===0) continue;
-
+      .filter(url => state.manifestSet.has(url.replace(/^\.\//,'')));
+    if(!files.length) continue;
     const stream = !!def.stream;
-    items.push({ name:key, files, stream });
-    map.set(key, { files, stream });
+    items.push({name:key, files, stream});
+    map.set(key,{files,stream});
   }
-
   items.sort((a,b)=>a.name.localeCompare(b.name));
   state.items = items;
   state.itemsByName = map;
-}
-
-function existsInManifest(url){
-  const u = url.replace(/^\.\//,'');
-  return state.manifestSet.has(u);
 }
 
 /* -------------------------- 렌더/필터/페이징 -------------------------- */
 function applyFilter(){
   const q = $('#q').value.trim().toLowerCase();
   const tokens = q.split(/[ ,]+/).filter(Boolean);
-
   let arr = state.items;
-  if(tokens.length){
-    arr = arr.filter(it => tokens.every(t => it.name.toLowerCase().includes(t)));
-  }
-  state.filtered = arr;
-  state.page = 1;
-  render();
+  if(tokens.length) arr = arr.filter(it => tokens.every(t => it.name.toLowerCase().includes(t)));
+  state.filtered = arr; state.page=1; render();
 }
-
-function pageSlice(){
-  const ps = state.pageSize;
-  const start = (state.page-1)*ps;
-  return state.filtered.slice(start, start+ps);
+function slicePage(){
+  const ps = state.pageSize, s=(state.page-1)*ps;
+  return state.filtered.slice(s,s+ps);
 }
-
 function render(){
   $('#pagesize').value = String(state.pageSize);
-  const total = state.filtered.length || 0;
+  const total = state.filtered.length;
   $('#total').textContent = `총 ${total}개 이벤트`;
   const pages = Math.max(1, Math.ceil(total/state.pageSize));
-  state.page = Math.min(state.page, pages);
-  $('#pageinfo').textContent  = `총 ${pages}페이지 / 현재 ${state.page}페이지`;
+  state.page = Math.min(state.page,pages);
+  $('#pageinfo').textContent = `총 ${pages}페이지 / 현재 ${state.page}페이지`;
   $('#pageinfo2').textContent = `총 ${pages}페이지 / 현재 ${state.page}페이지`;
 
   const frag = document.createDocumentFragment();
-  for(const it of pageSlice()) frag.appendChild(row(it));
-  const $list = $('#list'); $list.innerHTML=''; $list.appendChild(frag);
+  for(const it of slicePage()) frag.appendChild(row(it));
+  const L = document.getElementById('list'); L.innerHTML=''; L.appendChild(frag);
 }
 
-/* -------------------------- 오디오: 하나만 재생 + 변형 순환 -------------------------- */
-const player = new Audio();
-player.preload = 'auto';
-player.crossOrigin = 'anonymous';
-let currentName = null;
-
-// 사운드별 다음 재생할 변형 인덱스 (라운드 로빈)
-const nextIndexByName = new Map();
-function nextUrl(it){
-  const n = it.files.length;
-  if(n===1) return it.files[0];
-  const idx = nextIndexByName.get(it.name) ?? 0;
-  const url = it.files[idx % n];
-  nextIndexByName.set(it.name, (idx+1) % n);
-  return url;
-}
-
-function resetCycle(it){
-  nextIndexByName.set(it.name, 0);
-}
-
-function stopPlaying(){
-  try{ player.pause(); player.currentTime = 0; }catch{}
-  currentName = null;
-  $$('.play-btn[data-playing="1"]').forEach(btn=>{
-    btn.dataset.playing='0';
-    btn.textContent='▶ 재생';
-  });
-}
-
-function playItem(it, pitch, forceNextVariant=false){
-  // 다른 소리 재생 중 → 정지
-  if(currentName && currentName !== it.name) stopPlaying();
-
-  // 같은 소리를 이미 재생 중인데 강제로 다음 변형을 원하면 즉시 넘어감
-  let url;
-  if(forceNextVariant || currentName !== it.name){
-    url = nextUrl(it);
-  }else{
-    // 동일 항목을 처음 누른 경우도 다음 변형부터 시작하도록 통일
-    url = nextUrl(it);
-  }
-
-  player.src = url;
-  player.playbackRate = pitch || 1.0;
-  player.onended = ()=> stopPlaying();
-  player.play().catch(err=>{
-    alert('재생에 실패했어요. 파일 경로나 브라우저 정책을 확인해 주세요.\n\n원인: ' + err.message);
-    stopPlaying();
-  });
-  currentName = it.name;
-}
-
-/* -------------------------- DOM -------------------------- */
+/* -------------------------- 행 DOM -------------------------- */
 function row(it){
-  const $row = document.createElement('div');
-  $row.className = 'row';
+  const wrap=document.createElement('div'); wrap.className='row';
+  const h=document.createElement('h3'); h.textContent=it.name; wrap.appendChild(h);
 
-  const $h = document.createElement('h3');
-  $h.textContent = it.name;
-  $row.appendChild($h);
+  const controls=document.createElement('div'); controls.className='controls';
 
-  const $controls = document.createElement('div');
-  $controls.className = 'controls';
+  const play=document.createElement('button'); play.textContent='▶ 재생'; play.className='play-btn'; play.dataset.playing='0';
 
-  const $play = document.createElement('button');
-  $play.textContent = '▶ 재생';
-  $play.className = 'play-btn';
-  $play.dataset.playing = '0';
+  const label=document.createElement('span'); label.className='label'; label.textContent='피치:';
 
-  const $label = document.createElement('span');
-  $label.className = 'label';
-  $label.textContent = '피치:';
-
-  const $range = document.createElement('input');
-  $range.type = 'range';
-  $range.min = '0.1'; $range.max = '2.0'; $range.step = '0.1';
-  $range.value = '1.0';
-
-  const $val = document.createElement('span');
-  $val.className = 'small';
-  $val.textContent = '1.0';
-
-  $range.addEventListener('input', ()=>{
-    $val.textContent = Number($range.value).toFixed(1);
-    if(currentName === it.name) player.playbackRate = parseFloat($range.value);
+  const range=document.createElement('input'); range.type='range'; range.min='0.1'; range.max='2.0'; range.step='0.1'; range.value='1.0';
+  const val=document.createElement('span'); val.className='small'; val.textContent='1.0';
+  range.addEventListener('input',()=>{
+    val.textContent=Number(range.value).toFixed(1);
+    if(current.name===it.name && current.source){ current.source.playbackRate.value=parseFloat(range.value); }
   });
 
-  $play.onclick = ()=>{
-    const pitch = parseFloat($range.value);
-
-    // 이미 이 항목이 재생 중이라면 → "다음 변형"으로 즉시 전환
-    if(currentName === it.name && $play.dataset.playing === '1'){
-      playItem(it, pitch, true);
+  play.onclick = async ()=>{
+    // 같은 항목을 다시 누르면 → 다음 변형으로 전환
+    const pitch=parseFloat(range.value);
+    if(current.name===it.name && play.dataset.playing==='1'){
+      await playItem(it,pitch,true);
       return;
     }
-
-    // UI 초기화
-    $$('.play-btn[data-playing="1"]').forEach(btn=>{
-      btn.dataset.playing='0';
-      btn.textContent='▶ 재생';
-    });
-
-    // 새로 시작
-    $play.dataset.playing='1';
-    $play.textContent='⏸ 재생중';
-    // 새 항목을 누르면 순환을 처음부터 시작하고 싶으면 주석 해제
-    // resetCycle(it);
-    playItem(it, pitch, false);
+    // UI 초기화 + 기존 재생 정지
+    document.querySelectorAll('.play-btn[data-playing="1"]').forEach(b=>{b.dataset.playing='0'; b.textContent='▶ 재생';});
+    stopPlaying(); // 혹시 남아있으면
+    play.dataset.playing='1'; play.textContent='⏸ 재생중';
+    try{
+      await audioCtx.resume();
+      await playItem(it,pitch,false);
+    }catch(err){
+      alert('재생에 실패했어요: '+err.message);
+      play.dataset.playing='0'; play.textContent='▶ 재생';
+    }
   };
 
-  $controls.append($play, $label, $range, $val);
-  $row.appendChild($controls);
-  return $row;
+  controls.append(play,label,range,val);
+  wrap.appendChild(controls);
+  return wrap;
 }
 
-/* -------------------------- 이벤트 -------------------------- */
-$('#q').addEventListener('input', applyFilter);
-$('#pagesize').addEventListener('change', ()=>{
-  state.pageSize = parseInt($('#pagesize').value, 10);
-  localStorage.setItem('pagesize', String(state.pageSize));
+/* -------------------------- 페이징/검색 이벤트 -------------------------- */
+document.getElementById('q').addEventListener('input',applyFilter);
+document.getElementById('pagesize').addEventListener('change',()=>{
+  state.pageSize=parseInt(document.getElementById('pagesize').value,10);
+  localStorage.setItem('pagesize',String(state.pageSize));
   render();
 });
-$('#prev').onclick = $('#prev2').onclick = ()=>{ if(state.page>1){ state.page--; render(); } };
-$('#next').onclick = $('#next2').onclick = ()=>{
-  const pages = Math.max(1, Math.ceil((state.filtered.length||0)/state.pageSize));
-  if(state.page<pages){ state.page++; render(); }
-};
+const goPrev=()=>{ if(state.page>1){state.page--; render();}};
+const goNext=()=>{ const pages=Math.max(1,Math.ceil((state.filtered.length||0)/state.pageSize)); if(state.page<pages){state.page++; render();}};
+document.getElementById('prev').onclick=goPrev;
+document.getElementById('next').onclick=goNext;
+document.getElementById('prev2').onclick=goPrev;
+document.getElementById('next2').onclick=goNext;
 
 /* -------------------------- 초기화 -------------------------- */
 (async function init(){
