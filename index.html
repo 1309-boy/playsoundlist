@@ -1,322 +1,204 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Playsound 리스트</title>
   <style>
-    :root{
-      --bg:#0d1117; --panel:#161b22; --ink:#c9d1d9; --muted:#8b949e; --accent:#58a6ff; --line:#30363d;
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #111;
+      color: #ddd;
+      margin: 0;
+      padding: 10px;
     }
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Malgun Gothic,Arial,sans-serif}
-    .wrap{max-width:980px;margin:24px auto;padding:0 16px}
-    h1{margin:0 0 10px;font-size:26px}
-    .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-    .chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);padding:8px 10px;border-radius:10px}
-    input[type="search"]{flex:1;min-width:220px;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:10px 12px;border-radius:10px;outline:none}
-    button{background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:8px 12px;border-radius:10px;cursor:pointer}
-    button:hover{border-color:var(--accent)}
-    .card{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px 14px 10px;margin:12px 0}
-    .title{font-weight:600;margin-bottom:10px;word-break:break-all}
-    .muted{color:var(--muted)}
-    .flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .slider{width:340px;max-width:100%}
-    .pager{display:flex;gap:6px;align-items:center;margin:8px 0 2px}
-    .count{color:var(--muted);font-size:13px}
-    .right{margin-left:auto}
-    .small{font-size:12px}
+    h1 { font-size: 1.4em; margin-bottom: 10px; }
+    input, button { font-size: 1em; }
+    .sound { background: #222; margin: 6px 0; padding: 8px; border-radius: 6px; }
+    .title { font-weight: bold; color: #fff; margin-bottom: 6px; }
+    .pitch-control { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+    input[type=range] { flex: 1; }
+    .controls { margin-top: 6px; }
+    button { background: #444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+    button:hover { background: #666; }
+    .top-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Playsound 리스트 <span class="count" id="total"></span></h1>
-
-  <div class="row" style="margin-bottom:10px">
-    <input id="q" type="search" placeholder="이벤트 이름 검색 (예: beacon.power, ui.loom …)" />
-    <span class="chip small">페이지당 100개</span>
+  <h1>Playsound 리스트 <span id="total"></span></h1>
+  <div class="top-bar">
+    <input id="search" placeholder="이벤트 이름 검색 (예: beacon.power, ui.loom ...)" />
     <button id="reload">manifest 다시 불러오기</button>
   </div>
 
-  <div class="pager">
-    <button id="prev">&lt; 이전</button>
-    <button id="next">다음 &gt;</button>
-    <span class="count" id="pageInfo"></span>
-    <span class="right count muted">Decoder: <span id="decState" class="muted">loaded</span></span>
+  <div id="list"></div>
+
+  <div style="margin-top:10px;">
+    <button id="prev">◀ 이전</button>
+    <button id="next">다음 ▶</button>
+    <span id="pageinfo"></span>
   </div>
 
-  <div id="list"></div>
-</div>
+  <p id="decoderStatus" style="opacity:0.6;font-size:0.9em;">Decoder: loaded</p>
 
-<script>
-/**
- * 설정
- * - 오디오 파일은 /sounds_flat/ 아래에 .wav 로 존재(액션이 만든 결과)
- * - 매니페스트는 /sounds_flat/manifest.json (entries: [{url,label,type}])
- * - 추가로 /sound_definitions.txt 가 있으면 “사운드이름 → 변형 파일경로들” 매핑으로 사용
- */
-const PAGE_SIZE = 100;
-const AUDIO_BASE = 'sounds_flat/';               // 반드시 끝에 슬래시
-const MANIFEST_URL = 'sounds_flat/manifest.json';
-const DEFINITIONS_URL = 'sound_definitions.txt'; // 있으면 사용 (없어도 동작)
+  <script>
+  const BASE = window.location.pathname.replace(/\/[^/]*$/, '');
+  const DEFINITIONS_URL = `${BASE}/sound_definitions.txt`;
+  const MANIFEST_URL = `${BASE}/manifest.json`;
+  const PAGE_SIZE = 100;
+  const listDiv = document.getElementById('list');
+  const searchInput = document.getElementById('search');
+  const pageInfo = document.getElementById('pageinfo');
+  const totalSpan = document.getElementById('total');
+  const state = { items: [], filtered: [], page: 1, audio:null };
 
-const $ = sel => document.querySelector(sel);
-const $$ = sel => document.querySelectorAll(sel);
-
-const state = {
-  page: 1,
-  items: [],        // [{eventId, title, files:[{url, label}], firstUrl}]
-  filtered: [],
-  audioCtx: null,
-  currentSrc: null,
-  currentBuffer: null,
-  currentNode: null,
-  pitch: new Map()  // eventId -> rate
-};
-
-function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
-function normalizePath(p){
-  // 들어오는 값 예) "sounds_flat/ambient/nether/crimson_forest/mood1.wav" 또는 "ambient/nether/..."
-  // 한 번만 sounds_flat/ 붙도록 정리
-  p = p.replace(/^\.?\/*/,''); // ./ 제거
-  p = p.replace(/^sounds_flat\//,''); // 중복 접두 제거
-  return AUDIO_BASE + p;
-}
-function stripPrefix(id){
-  return id.replace(/^sounds_flat[./]/,'');
-}
-function baseNameWithoutIndex(name){
-  // ambient.nether.crimson_forest.mood1 -> ambient.nether.crimson_forest.mood (숫자 꼬리 제거)
-  return name.replace(/\.(?:\d+|mood\d+|step\d+|break\d+|place\d+|hit\d+|idle\d+|enter\d+|exit\d+|hurt\d+|death\d+|attack\d+|thunder\d+|rain\d+|flash\d+)(?=\.|$)/,'')
-             .replace(/(\d+)$/,'');
-}
-function filePathToEventId(urlLike){
-  // "ambient/nether/crimson_forest/mood1.wav" -> "ambient.nether.crimson_forest.mood"
-  const noExt = urlLike.replace(/\.wav$/,'');
-  const dots = noExt.replace(/\//g,'.');
-  return baseNameWithoutIndex(dots);
-}
-function labelFromEventId(eventId){
-  // 화면 표시용: minecraft: 접두 제거, sounds_flat 제거
-  return eventId.replace(/^minecraft:/,'').replace(/^sounds_flat\./,'');
-}
-
-/* -------- 데이터 불러오기 -------- */
-async function loadText(url){
-  const r = await fetch(url, {cache:'no-store'});
-  if(!r.ok) throw new Error(`fetch fail ${url} (${r.status})`);
-  return await r.text();
-}
-async function loadJSON(url){
-  const r = await fetch(url, {cache:'no-store'});
-  if(!r.ok) throw new Error(`fetch fail ${url} (${r.status})`);
-  return await r.json();
-}
-
-function parseDefinitions(text){
-  // 허용 포맷 (둘 다 지원):
-  // 1) eventId = pathA.wav, pathB.wav ...
-  // 2) path.wav -> eventId
-  // 라인 주석(#//) 허용
-  const map = new Map(); // eventId -> Set(paths)
-  text.split(/\r?\n/).forEach(line=>{
-    const s = line.trim();
-    if(!s || s.startsWith('#') || s.startsWith('//')) return;
-    if(s.includes('->')){
-      const [lhs, rhs] = s.split('->').map(x=>x.trim());
-      const path = lhs.replace(/^sounds_flat[./]/,'').replace(/\s+/g,'');
-      const eventId = rhs.replace(/^minecraft:/,'').replace(/\s+/g,'');
-      if(!map.has(eventId)) map.set(eventId, new Set());
-      map.get(eventId).add(path);
-    }else if(s.includes('=')){
-      const [lhs, rhs] = s.split('=');
-      const eventId = lhs.trim().replace(/^minecraft:/,'');
-      const paths = rhs.split(/[,|]/).map(x=>x.trim()).filter(Boolean);
-      if(!map.has(eventId)) map.set(eventId, new Set());
-      const set = map.get(eventId);
-      paths.forEach(p=> set.add(p.replace(/^sounds_flat[./]/,'')));
-    }
-  });
-  // Map -> array
-  const items = [];
-  for(const [eventId,set] of map){
-    const files = [...set].map(p=>{
-      const url = normalizePath(p);
-      const label = p.split('/').slice(-1)[0];
-      return { url, label };
-    }).sort((a,b)=>a.label.localeCompare(b.label,'en'));
-    items.push({ eventId, title: labelFromEventId(eventId), files, firstUrl: files[0]?.url || null });
+  async function loadText(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    return await res.text();
   }
-  return items.sort((a,b)=> a.title.localeCompare(b.title,'en'));
-}
-
-function buildFromManifest(man){
-  // man.entries: [{url:"sounds_flat/.../mood1.wav", label:"...", type:"wav"}]
-  const groups = new Map(); // key: eventId -> {eventId, title, files:[]}
-  for(const e of (man.entries||[])){
-    if(!e.url) continue;
-    const rel = e.url.replace(/^\.?\/*/,'').replace(/^sounds_flat\//,''); // 상대경로
-    const eventId = filePathToEventId(rel);
-    if(!groups.has(eventId)) groups.set(eventId, {eventId, title: labelFromEventId(eventId), files:[]});
-    groups.get(eventId).files.push({ url: normalizePath(rel), label: rel.split('/').slice(-1)[0] });
-  }
-  const items = [...groups.values()];
-  // 각 그룹 내 파일 라벨 정렬
-  items.forEach(g=> g.files.sort((a,b)=>a.label.localeCompare(b.label,'en')));
-  // 그룹 정렬
-  items.sort((a,b)=> a.title.localeCompare(b.title,'en'));
-  // firstUrl 지정
-  items.forEach(g=> g.firstUrl = g.files[0]?.url || null);
-  return items;
-}
-
-async function loadAll(){
-  try{
-    // 1순위: sound_definitions.txt (있으면 “정답 매핑” 사용)
-    const text = await loadText(DEFINITIONS_URL);
-    state.items = parseDefinitions(text);
-  }catch{
-    // 2순위: manifest.json (없으면 오류)
-    const man = await loadJSON(MANIFEST_URL);
-    state.items = buildFromManifest(man);
-  }
-  state.filtered = state.items.slice();
-  $('#total').textContent = `총 ${state.items.length}개 이벤트`;
-  state.page = 1;
-  render();
-}
-
-/* -------- 렌더링 -------- */
-function render(){
-  const q = $('#q').value.trim().toLowerCase();
-  if(q){
-    state.filtered = state.items.filter(it => it.title.toLowerCase().includes(q));
-  }else{
-    state.filtered = state.items.slice();
+  async function loadJSON(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(res.status);
+    return await res.json();
   }
 
-  const totalPages = Math.max(1, Math.ceil(state.filtered.length / PAGE_SIZE));
-  state.page = clamp(state.page, 1, totalPages);
-  const start = (state.page-1)*PAGE_SIZE;
-  const pageItems = state.filtered.slice(start, start+PAGE_SIZE);
-
-  $('#pageInfo').textContent = `총 ${totalPages} 페이지 / 현재 ${state.page} 페이지`;
-  const list = $('#list');
-  list.innerHTML = '';
-
-  pageItems.forEach(item=>{
-    const rate = state.pitch.get(item.eventId) ?? 1.0;
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <div class="title">${escapeHtml(item.title)}</div>
-      <div class="flex">
-        <button data-act="play">▶ 재생</button>
-        <button data-act="stop">■ 정지</button>
-        <span class="muted">피치:</span>
-        <input type="range" min="0.1" max="2.0" step="0.1" value="${rate}" class="slider" />
-        <span class="muted">${rate.toFixed(1)}</span>
-        <span class="muted small">변형: ${item.files.length}개</span>
-      </div>
-    `;
-    // 이벤트
-    const btnPlay = card.querySelector('[data-act="play"]');
-    const btnStop = card.querySelector('[data-act="stop"]');
-    const slider  = card.querySelector('input[type="range"]');
-
-    btnPlay.addEventListener('click', ()=> playGroup(item));
-    btnStop.addEventListener('click', stopAudio);
-
-    slider.addEventListener('input', (e)=>{
-      const v = parseFloat(e.target.value);
-      state.pitch.set(item.eventId, v);
-      e.target.nextElementSibling.textContent = v.toFixed(1);
-      // 재생 중인 경우 실시간 반영
-      if(state.currentNode){
-        try{ state.currentNode.playbackRate.value = v; }catch{}
+  async function loadAll(){
+    try{
+      const text = await loadText(DEFINITIONS_URL);
+      const parsed = parseDefinitions(text);
+      if (parsed.length > 0) {
+        state.items = parsed;
+      } else {
+        const man = await loadJSON(MANIFEST_URL);
+        state.items = buildFromManifest(man);
       }
-    });
-
-    list.appendChild(card);
-  });
-}
-
-/* -------- 오디오 재생 -------- */
-async function ensureCtx(){
-  if(!state.audioCtx) state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if(state.audioCtx.state === 'suspended') await state.audioCtx.resume();
-  return state.audioCtx;
-}
-
-async function fetchArrayBuffer(url){
-  const r = await fetch(url);
-  if(!r.ok) throw new Error(`HTTP ${r.status}`);
-  return await r.arrayBuffer();
-}
-
-async function decodeToBuffer(url){
-  const ctx = await ensureCtx();
-  const data = await fetchArrayBuffer(url);
-  return await ctx.decodeAudioData(data);
-}
-
-function chooseVariant(files){
-  // 간단: 첫 번째. (원하면 여기서 무작위 선택으로 바꿀 수 있음)
-  return files[0]?.url || null;
-}
-
-async function playGroup(item){
-  const url = chooseVariant(item.files);
-  if(!url){
-    alert('재생할 파일이 없습니다.');
-    return;
-  }
-  const rate = state.pitch.get(item.eventId) ?? 1.0;
-
-  try{
-    stopAudio();
-
-    const buffer = await decodeToBuffer(url);
-    const ctx = await ensureCtx();
-    const src = ctx.createBufferSource();
-    src.buffer = buffer;
-    src.playbackRate.value = rate;
-    src.connect(ctx.destination);
-    src.start(0);
-
-    state.currentSrc = url;
-    state.currentBuffer = buffer;
-    state.currentNode = src;
-
-    src.onended = ()=>{ state.currentNode = null; };
-  }catch(err){
-    alert(`재생에 실패했어요. 파일 경로나 브라우저 정책을 확인해 주세요.\n\n원인: ${err.message}\nURL: ${url}`);
-  }
-}
-
-function stopAudio(){
-  try{
-    if(state.currentNode){
-      state.currentNode.stop();
-      state.currentNode.disconnect();
+    }catch{
+      const man = await loadJSON(MANIFEST_URL);
+      state.items = buildFromManifest(man);
     }
-  }catch{}
-  state.currentNode = null;
-}
 
-/* -------- 유틸 & 이벤트 바인딩 -------- */
-function escapeHtml(s){
-  return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-}
+    state.filtered = state.items.slice();
+    totalSpan.textContent = `총 ${state.items.length}개 이벤트`;
+    state.page = 1;
+    render();
+  }
 
-$('#q').addEventListener('input', ()=>{ state.page=1; render(); });
-$('#prev').addEventListener('click', ()=>{ state.page--; render(); });
-$('#next').addEventListener('click', ()=>{ state.page++; render(); });
-$('#reload').addEventListener('click', ()=> loadAll());
+  function parseDefinitions(text){
+    text = text.replace(/^\uFEFF/, '');
+    const map = new Map();
+    for (const raw of text.split(/\r?\n/)) {
+      let line = raw.trim();
+      if (!line || line.startsWith('#') || line.startsWith('//')) continue;
+      line = line.replace(/\s*(#|\/\/).*$/, '').trim();
+      if (!line) continue;
 
-/* 초기 로드 */
-loadAll().catch(err=>{
-  alert(`manifest 로드 실패: ${err.message}`);
-});
-</script>
+      if (line.includes('->')) {
+        const [lhs, rhs] = line.split('->').map(s=>s.trim());
+        if (!lhs || !rhs) continue;
+        const path = lhs.replace(/^(\.\/)?(sounds_flat\/)?/,'');
+        const eventId = rhs.replace(/^minecraft:/,'');
+        if (!map.has(eventId)) map.set(eventId,new Set());
+        map.get(eventId).add(path);
+        continue;
+      }
+
+      if (line.includes('=')) {
+        const [lhs, rhs] = line.split('=').map(s=>s.trim());
+        if (!lhs || !rhs) continue;
+        const eventId = lhs.replace(/^minecraft:/,'');
+        const parts = rhs.split(/[,\|]/).map(s=>s.trim()).filter(Boolean);
+        if (!map.has(eventId)) map.set(eventId,new Set());
+        const set = map.get(eventId);
+        parts.forEach(p => set.add(p.replace(/^(\.\/)?(sounds_flat\/)?/,'') ));
+        continue;
+      }
+    }
+    const items=[];
+    for (const [eventId, set] of map) {
+      const files = [...set].map(p => ({
+        url: normalizePath(p),
+        label: p.split('/').pop()
+      }));
+      items.push({eventId, title: labelFromEventId(eventId), files});
+    }
+    items.sort((a,b)=>a.title.localeCompare(b.title,'en'));
+    return items;
+  }
+
+  function normalizePath(p){
+    if (!p.endsWith('.wav')) return `${BASE}/sounds_flat/${p}.wav`;
+    return `${BASE}/sounds_flat/${p}`;
+  }
+
+  function buildFromManifest(man){
+    const arr = man.entries?.map(e=>({
+      eventId: e.id?.replace(/^minecraft:/,'') || e.label || e.url,
+      title: e.label || e.id || e.url,
+      files: [{url: `${BASE}/${e.url}`, label: e.url.split('/').pop()}]
+    })) || [];
+    arr.sort((a,b)=>a.title.localeCompare(b.title,'en'));
+    return arr;
+  }
+
+  function labelFromEventId(id){
+    return id.replace(/^minecraft:/,'');
+  }
+
+  function render(){
+    const start=(state.page-1)*PAGE_SIZE, end=start+PAGE_SIZE;
+    const slice=state.filtered.slice(start,end);
+    listDiv.innerHTML='';
+    for (const s of slice){
+      const div=document.createElement('div');
+      div.className='sound';
+      div.innerHTML=`
+        <div class="title">${s.title}</div>
+        <div class="controls">
+          <button class="play">▶ 재생</button>
+          <button class="stop">■ 정지</button>
+        </div>
+        <div class="pitch-control">
+          <label>피치:</label>
+          <input type="range" min="0.1" max="2.0" step="0.1" value="1" class="pitch">
+          <span class="pval">1.0</span>
+        </div>`;
+      listDiv.appendChild(div);
+
+      const playBtn=div.querySelector('.play');
+      const stopBtn=div.querySelector('.stop');
+      const pitch=div.querySelector('.pitch');
+      const pval=div.querySelector('.pval');
+      playBtn.onclick=()=>play(s.files[0].url,parseFloat(pitch.value));
+      stopBtn.onclick=()=>{if(state.audio){state.audio.pause();state.audio=null}};
+      pitch.oninput=()=>pval.textContent=pitch.value;
+    }
+    pageInfo.textContent=`총 ${state.filtered.length}개 / ${Math.ceil(state.filtered.length/PAGE_SIZE)}페이지 중 ${state.page}페이지`;
+  }
+
+  async function play(url,rate){
+    try{
+      if(state.audio){state.audio.pause();}
+      const audio=new Audio(url);
+      audio.preservesPitch=false;
+      audio.playbackRate=rate;
+      await audio.play();
+      state.audio=audio;
+    }catch(err){
+      alert(`재생 실패: ${err.message}\nURL: ${url}`);
+    }
+  }
+
+  searchInput.addEventListener('input',()=>{
+    const q=searchInput.value.toLowerCase();
+    state.filtered=state.items.filter(s=>s.title.toLowerCase().includes(q));
+    state.page=1; render();
+  });
+  document.getElementById('next').onclick=()=>{if(state.page*PAGE_SIZE<state.filtered.length){state.page++;render();}};
+  document.getElementById('prev').onclick=()=>{if(state.page>1){state.page--;render();}};
+  document.getElementById('reload').onclick=()=>loadAll();
+
+  loadAll();
+  </script>
 </body>
 </html>
