@@ -1,0 +1,15 @@
+{
+  "hosting": {
+    "site": "playsoundlist",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      ".github/**",
+      "sounds_flat/**"
+    ],
+    "cleanUrls": true,
+    "trailingSlash": false
+  }
+}
