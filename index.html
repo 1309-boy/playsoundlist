@@ -6,30 +6,48 @@
 <title>Playsound 리스트</title>
 <style>
   :root { color-scheme: light dark; }
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans KR', sans-serif; margin: 0; }
-  header { padding: 14px 16px; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: #fff; }
+  body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans KR', sans-serif;
+    margin: 0;
+    background: #f8f8f8;
+  }
+  header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #ddd;
+    background: #fff;
+    position: sticky; top: 0; z-index: 10;
+  }
   h1 { margin: 0 0 8px; font-size: 22px; }
   .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .toolbar input[type="search"]{
-    flex: 1 1 320px; padding: 10px 12px; border: 1px solid #ccc; border-radius: 10px; outline: none;
+  .toolbar input[type="search"] {
+    flex: 1 1 320px;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    outline: none;
   }
   .count { opacity: .75; font-size: 14px; white-space: nowrap; }
   main { padding: 14px 12px 60px; }
   .card {
-    border: 1px solid #ddd; border-radius: 14px; padding: 14px; margin: 10px 0;
-    background: #fafafa;
+    border: 1px solid #ddd; border-radius: 14px;
+    padding: 14px; margin: 10px 0;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
   .title { font-weight: 700; margin-bottom: 10px; word-break: break-all; }
   .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   button {
-    padding: 8px 12px; border-radius: 10px; border: 1px solid #bbb; background: #fff; cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #bbb;
+    background: #fff;
+    cursor: pointer;
   }
-  button:disabled{ opacity:.5; cursor: not-allowed; }
+  button:disabled { opacity:.5; cursor: not-allowed; }
   .slider { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; width: 100%; }
-  input[type="range"]{ width: 100%; }
+  input[type="range"] { width: 100%; }
   .pagination { display: flex; gap: 8px; align-items: center; padding: 8px 16px; }
   .muted { opacity: .7; }
-  .hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -54,48 +72,40 @@
 
 <script>
 (() => {
-  // ====== 설정 ======
+  // ===== 설정 =====
   const PAGE_SIZE = 100;
 
-  // ====== 상태 ======
+  // ===== 상태 =====
   let manifestUrlUsed = null;
-  let allItems = [];     // {name, url}
-  let filtered = [];     // 검색 필터된 배열
-  let page = 1;          // 1-based
-  const cache = new Map(); // url -> {buffer}
+  let allItems = [];
+  let filtered = [];
+  let page = 1;
+  const cache = new Map();
 
-  // WebAudio
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  // ====== 도우미 ======
+  // ===== 도우미 =====
   function absoluteFromManifest(rel) {
     try {
-      // manifest가 놓인 페이지의 디렉터리를 기준으로 만듦
       const base = manifestUrlUsed ?? location.href;
       const baseDir = base.replace(/manifest\.json.*$/i, '');
-
-      // manifest의 url이 이미 "sounds_flat/..."를 포함하는 구조라면
-      // 페이지 기준으로 다시 붙일 때 중복이 생김 → 선제적으로 제거
-      const relFixed = rel.replace(/^sounds_flat\//, '');
-
-      // 항상 pages 루트에서 sounds_flat를 기준으로 만들기
-      return new URL('sounds_flat/' + relFixed, baseDir).href;
+      // 이미 sounds_flat/ 로 시작하면 그대로 둠
+      const relFixed = rel.startsWith('sounds_flat/')
+        ? rel
+        : 'sounds_flat/' + rel.replace(/^\/+/, '');
+      return new URL(relFixed, baseDir).href;
     } catch (e) {
-      // 실패 시 대충 보정
       return rel.startsWith('/') ? rel : '/' + rel;
     }
   }
 
-  // 파일 경로를 표시용 이름으로 정규화
   function niceNameFromUrl(u) {
     try {
       const p = new URL(u).pathname
         .replace(/^\/+/, '')
         .replace(/\.wav$/i, '');
-      // .../sounds_flat/<path> → <path>
       const idx = p.toLowerCase().indexOf('sounds_flat/');
       const sub = idx >= 0 ? p.slice(idx + 'sounds_flat/'.length) : p;
-      // 슬래시 → 점
       return sub.split('/').filter(Boolean).join('.');
     } catch {
       return u;
@@ -103,7 +113,7 @@
   }
 
   function paginate(arr, p, size) {
-    const start = (p-1) * size;
+    const start = (p - 1) * size;
     return arr.slice(start, start + size);
   }
 
@@ -117,7 +127,7 @@
     alert(msg + (err ? '\n\n원인: ' + (err.message || String(err)) : ''));
   }
 
-  // ====== 렌더링 ======
+  // ===== 렌더링 =====
   const $list = document.getElementById('list');
   const $q = document.getElementById('q');
   const $total = document.getElementById('total');
@@ -134,8 +144,8 @@
     $next.disabled = page >= totalPages;
 
     const rows = paginate(filtered, page, PAGE_SIZE);
-
     $list.innerHTML = '';
+
     for (const it of rows) {
       const card = document.createElement('div');
       card.className = 'card';
@@ -152,7 +162,6 @@
       const stopBtn = document.createElement('button');
       stopBtn.textContent = '■ 정지';
 
-      // 피치 슬라이더
       const sliderWrap = document.createElement('div');
       sliderWrap.className = 'slider';
       const pitchLabel = document.createElement('span');
@@ -171,12 +180,10 @@
       });
 
       sliderWrap.append(pitchLabel, range, val);
-
       row.append(playBtn, stopBtn);
       card.append(title, row, document.createElement('div'), sliderWrap);
       $list.append(card);
 
-      // 재생/정지 로직
       let currentNode = null;
 
       async function ensureBuffer(url) {
@@ -192,7 +199,6 @@
 
       playBtn.addEventListener('click', async () => {
         try {
-          // 여러 번 눌렀을 때 기존 소스 정지
           if (currentNode) {
             try { currentNode.stop(); } catch {}
             currentNode.disconnect();
@@ -228,26 +234,16 @@
     setPage(1);
   }
 
-  $q.addEventListener('input', () => {
-    // 즉시 필터 반영
-    applyFilter();
-  });
-
+  $q.addEventListener('input', applyFilter);
   $prev.addEventListener('click', () => setPage(page - 1));
   $next.addEventListener('click', () => setPage(page + 1));
   $reload.addEventListener('click', () => loadManifest(true));
 
-  // ====== manifest 로딩 ======
+  // ===== manifest 로드 =====
   async function loadManifest(force = false) {
     try {
-      // pages 루트에서 고정 경로로 시도
       const fixed = new URL('./sounds_flat/manifest.json', location.href).href;
-      let url = fixed;
-
-      if (!force) {
-        // 혹시 캐시된 게 있으면 유지
-        url = manifestUrlUsed || fixed;
-      }
+      let url = force ? fixed : (manifestUrlUsed || fixed);
 
       const res = await fetch(url, { mode: 'cors', cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -255,8 +251,6 @@
       manifestUrlUsed = url;
 
       const entries = Array.isArray(data?.entries) ? data.entries : [];
-      // manifest의 url은 보통 "sounds_flat/xxx/yyy.wav"
-      // → 페이지 기준 절대 경로로 보정
       allItems = entries.map(e => {
         const abs = absoluteFromManifest(String(e.url || ''));
         const name = niceNameFromUrl(abs);
@@ -269,7 +263,6 @@
     }
   }
 
-  // 초기화
   loadManifest();
 })();
 </script>
