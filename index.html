@@ -1,287 +1,284 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BE Playsound List</title>
 <style>
-  :root{--bg:#111;--fg:#e8e8e8;--muted:#9aa3ad;--card:#1b1b1b;--btn:#2a2a2a;--btn2:#3a3a3a;
-        --play-bg:#1f6f3d; --play-border:#2ea043;}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  header{display:flex;align-items:center;gap:.75rem;padding:.9rem 1rem;border-bottom:1px solid #222}
-  h1{font-size:16px;margin:0}
-  .meta{opacity:.8}
-  .grow{flex:1}
-  input[type="search"]{width:100%;padding:.6rem .7rem;border-radius:.5rem;border:1px solid #2b2b2b;background:#0f0f0f;color:var(--fg)}
-  select,button{border:1px solid #2b2b2b;background:var(--btn);color:var(--fg);border-radius:.5rem;padding:.45rem .6rem;cursor:pointer}
-  button:hover{background:var(--btn2)}
-  main{padding:1rem;max-width:980px;margin:0 auto}
-  .row{background:var(--card);border:1px solid #222;border-radius:.8rem;margin:.6rem 0;padding:.8rem 1rem}
-  .row h3{margin:.1rem 0 .6rem 0;font-size:15px;font-weight:600;word-break:break-all}
-  .controls{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
-  .label{opacity:.85}
-  input[type="range"]{width:260px}
-  .toolbar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.5rem 0 1rem}
-  .small{font-size:12px;color:var(--muted)}
-  .divider{height:1px;background:#1e1e1e;margin:1rem 0}
-  .pager{display:flex;gap:.5rem;align-items:center}
-  /* active playing button */
-  .play-btn.playing{
-    background: var(--play-bg) !important;
-    border-color: var(--play-border) !important;
+  body {
+    background-color: #111;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 1rem;
+  }
+
+  h1 {
+    text-align: center;
+    color: #90caf9;
+  }
+
+  .sound-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-top: 1rem;
+  }
+
+  .card {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 0 5px #000;
+  }
+
+  .card .title {
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #fff;
+    overflow-wrap: anywhere;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .btn {
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background-color: #2b2b2b;
+    color: #eee;
+    cursor: pointer;
+    transition: all .2s;
+  }
+
+  .btn:hover {
+    background-color: #444;
+  }
+
+  .btn.play.playing {
+    background-color: #16a34a;
+    color: #000;
+    border-color: #16a34a;
+  }
+
+  .btn.stop {
+    background-color: #3a3a3a;
+  }
+
+  .btn.stop:hover {
+    background-color: #555;
+  }
+
+  input[type="range"] {
+    width: 100px;
+  }
+
+  .pitch-val {
+    min-width: 40px;
+    text-align: center;
+  }
+
+  #search {
+    display: block;
+    margin: 0 auto;
+    margin-bottom: 1rem;
+    padding: .5rem;
+    width: 300px;
+    border-radius: 6px;
+    border: none;
+    outline: none;
+  }
+
+  #counter {
+    text-align: center;
+    color: #888;
+    margin-bottom: 1rem;
   }
 </style>
 </head>
 <body>
-<header>
-  <h1>BE Playsound List</h1>
-  <div class="meta" id="total"></div>
-  <div class="grow"></div>
-</header>
 
-<main>
-  <div class="toolbar">
-    <input id="q" type="search" placeholder="Search events (e.g., beacon.power, ui.loom …)"/>
-    <select id="pagesize" title="Items per page">
-      <option>50</option><option selected>100</option><option>150</option><option>200</option>
-    </select>
-  </div>
-
-  <div class="pager">
-    <button id="prev">&lt; Prev</button>
-    <button id="next">Next &gt;</button>
-    <div class="small" id="pageinfo"></div>
-  </div>
-
-  <div id="list"></div>
-
-  <div class="pager">
-    <button id="prev2">&lt; Prev</button>
-    <button id="next2">Next &gt;</button>
-    <div class="small" id="pageinfo2"></div>
-  </div>
-
-  <div class="divider"></div>
-</main>
+<h1>BE Playsound List</h1>
+<input type="text" id="search" placeholder="Search sounds...">
+<div id="counter">Loading sounds...</div>
+<div id="sound-list" class="sound-list"></div>
 
 <script>
-/* -------------------------- paths / constants -------------------------- */
-const MANIFEST_URL    = './sounds_flat/manifest.json';
-const DEFINITIONS_URL = './sound_definitions.json';
-const WAV_PREFIX      = './sounds_flat/';
+  const MANIFEST_URL = 'https://1309-boy.github.io/playsoundlist/manifest.json';
+  const DEFINITIONS_URL = 'https://1309-boy.github.io/playsoundlist/sound_definitions.json';
+  const PAGE_SIZE = 100;
 
-/* -------------------------- app state -------------------------- */
-const state = {
-  items: [], filtered: [], page: 1,
-  pageSize: parseInt(localStorage.getItem('pagesize')||'100',10),
-  manifestSet: new Set(), itemsByName: new Map()
-};
-const $  = s=>document.querySelector(s);
+  let soundDefs = {};
+  let allItems = [];
+  let filtered = [];
+  let currentPage = 0;
 
-/* -------------------------- WebAudio player -------------------------- */
-const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-let current = { name:null, source:null, gain:null };
-const bufferCache = new Map();      // url -> Promise<AudioBuffer>
-const nextIndexByName = new Map();  // round-robin index
+  let currentAudio = null;
+  let currentPlayBtn = null;
+  let currentItemKey = null;
 
-async function getBuffer(url){
-  if(!bufferCache.has(url)){
-    const p = (async ()=>{
-      const r = await fetch(url,{cache:'force-cache'});
-      if(!r.ok) throw new Error(`Failed to load file: ${r.status} ${url}`);
-      const ab = await r.arrayBuffer();
-      return await audioCtx.decodeAudioData(ab);
-    })();
-    bufferCache.set(url,p);
-  }
-  return bufferCache.get(url);
-}
+  const listEl = document.getElementById('sound-list');
+  const counterEl = document.getElementById('counter');
 
-function clearPlayingUI(){
-  document.querySelectorAll('.play-btn.playing').forEach(btn=>{
-    btn.classList.remove('playing');
-  });
-}
-
-/* stop ONLY the current source, safely (detach onended to avoid race) */
-function stopCurrentSafely(){
-  const src = current.source;
-  if(src){
-    try { src.onended = null; src.stop(0); } catch {}
-  }
-  current = { name:null, source:null, gain:null };
-  clearPlayingUI();
-}
-
-function nextUrl(it){
-  const n = it.files.length;
-  if(n===1) return it.files[0];
-  const idx = nextIndexByName.get(it.name) ?? 0;
-  nextIndexByName.set(it.name, (idx+1)%n);
-  return it.files[idx % n];
-}
-
-async function playItem(it, pitch, forceNext=false){
-  // if another item is playing, stop it WITHOUT triggering its onended cleanup on the new one
-  if(current.name && current.name!==it.name){
-    stopCurrentSafely();
-  }
-
-  const url = nextUrl(it);  // round-robin every click
-  const buffer = await getBuffer(url);
-
-  const source = audioCtx.createBufferSource();
-  source.buffer = buffer;
-  source.playbackRate.value = pitch || 1.0;
-
-  const gain = audioCtx.createGain();
-  gain.gain.value = 0.9;
-
-  // mild LPF to reduce aliasing at high pitch
-  const lp = audioCtx.createBiquadFilter();
-  lp.type = 'lowpass';
-  lp.frequency.value = Math.min(audioCtx.sampleRate/2, 12000 * (pitch||1));
-  lp.Q.value = 0.707;
-
-  source.connect(lp);
-  lp.connect(gain);
-  gain.connect(audioCtx.destination);
-
-  // Guard: only stop if THIS source is still current
-  source.onended = ()=>{
-    if(current.source === source){
-      stopCurrentSafely();
-    }
+  // Pitch helper
+  const getPitchFor = (key) => {
+    const el = document.querySelector(`[data-key="${key}"] .pitch`);
+    return el ? parseFloat(el.value || '1.0') : 1.0;
   };
 
-  current = { name:it.name, source, gain };
-  source.start(0);
-}
+  // Load sounds
+  async function loadData() {
+    const res = await fetch(DEFINITIONS_URL);
+    const defs = await res.json();
+    soundDefs = defs;
 
-/* -------------------------- data loading -------------------------- */
-async function loadManifest(){
-  const r = await fetch(MANIFEST_URL,{cache:'no-store'});
-  if(!r.ok) throw new Error(`Failed to load manifest: HTTP ${r.status}`);
-  const j = await r.json();
-  const urls = (j.entries||[]).map(e=>e.url).filter(Boolean);
-  state.manifestSet = new Set(urls.map(u=>u.replace(/^\.\//,'')));
-}
-async function loadDefinitions(){
-  const r = await fetch(DEFINITIONS_URL,{cache:'no-store'});
-  if(!r.ok) throw new Error(`Failed to load sound_definitions: HTTP ${r.status}`);
-  const defsAll = await r.json();
-  const defs = defsAll.sound_definitions || defsAll;
+    allItems = Object.keys(defs).map(name => ({
+      name,
+      files: defs[name]?.sounds?.map(s => s.name.replace(/^sounds\//, '')) || []
+    }));
 
-  const items=[], map=new Map();
-  for(const [key,def] of Object.entries(defs)){
-    if(!def || !Array.isArray(def.sounds)) continue;
-    const files = def.sounds
-      .map(s=>typeof s==='string'?{name:s}:s)
-      .map(s=> s?.name ? (WAV_PREFIX + s.name.replace(/^sounds\//,'') + '.wav') : null)
-      .filter(Boolean)
-      .filter(url => state.manifestSet.has(url.replace(/^\.\//,'')));
-    if(!files.length) continue;
-    const stream = !!def.stream;
-    items.push({name:key, files, stream});
-    map.set(key,{files,stream});
+    filtered = allItems;
+    counterEl.textContent = `${allItems.length} sounds loaded`;
+    renderPage(0);
   }
-  items.sort((a,b)=>a.name.localeCompare(b.name));
-  state.items = items;
-  state.itemsByName = map;
-}
 
-/* -------------------------- render / paging / filter -------------------------- */
-function applyFilter(){
-  const q = $('#q').value.trim().toLowerCase();
-  const tokens = q.split(/[ ,]+/).filter(Boolean);
-  let arr = state.items;
-  if(tokens.length) arr = arr.filter(it => tokens.every(t => it.name.toLowerCase().includes(t)));
-  state.filtered = arr; state.page=1; render();
-}
-function slicePage(){
-  const ps = state.pageSize, s=(state.page-1)*ps;
-  return state.filtered.slice(s,s+ps);
-}
-function render(){
-  $('#pagesize').value = String(state.pageSize);
-  const total = state.filtered.length;
-  $('#total').textContent = `Total ${total} events`;
-  const pages = Math.max(1, Math.ceil(total/state.pageSize));
-  state.page = Math.min(state.page,pages);
-  $('#pageinfo').textContent = `Page ${state.page} of ${pages}`;
-  $('#pageinfo2').textContent = `Page ${state.page} of ${pages}`;
+  // Render one page
+  function renderPage(page) {
+    currentPage = page;
+    listEl.innerHTML = '';
+    const start = page * PAGE_SIZE;
+    const end = Math.min(start + PAGE_SIZE, filtered.length);
+    const items = filtered.slice(start, end);
 
-  const frag = document.createDocumentFragment();
-  for(const it of slicePage()) frag.appendChild(row(it));
-  const L = document.getElementById('list'); L.innerHTML=''; L.appendChild(frag);
-}
+    for (const item of items) {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.dataset.key = item.name;
 
-/* -------------------------- row DOM -------------------------- */
-function row(it){
-  const wrap=document.createElement('div'); wrap.className='row';
-  const h=document.createElement('h3'); h.textContent=it.name; wrap.appendChild(h);
+      div.innerHTML = `
+        <div class="title">${item.name}</div>
+        <div class="row">
+          <button class="btn play">Play</button>
+          <button class="btn stop">Stop</button>
+        </div>
+        <div class="row">
+          <label>Pitch:</label>
+          <input type="range" min="0.1" max="2.0" step="0.1" value="1.0" class="pitch">
+          <span class="pitch-val">1.0</span>
+        </div>
+      `;
+      listEl.appendChild(div);
+    }
 
-  const controls=document.createElement('div'); controls.className='controls';
+    counterEl.textContent = `Showing ${start + 1}-${end} of ${filtered.length} sounds`;
+  }
 
-  const play=document.createElement('button');
-  play.textContent='Play';
-  play.className='play-btn';
-
-  const label=document.createElement('span'); label.className='label'; label.textContent='Pitch:';
-
-  const range=document.createElement('input'); range.type='range'; range.min='0.1'; range.max='2.0'; range.step='0.1'; range.value='1.0';
-  const val=document.createElement('span'); val.className='small'; val.textContent='1.0';
-  range.addEventListener('input',()=>{
-    val.textContent=Number(range.value).toFixed(1);
-    if(current.name===it.name && current.source){ current.source.playbackRate.value=parseFloat(range.value); }
+  // Filter
+  document.getElementById('search').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    filtered = allItems.filter(s => s.name.toLowerCase().includes(q));
+    renderPage(0);
   });
 
-  play.onclick = async ()=>{
-    const pitch=parseFloat(range.value);
-    // UI: remove old green state first
-    clearPlayingUI();
-    try{
-      await audioCtx.resume();
-      await playItem(it,pitch,true);
-      // success → mark this button green
-      play.classList.add('playing');
-    }catch(err){
-      alert('Playback failed: '+err.message);
-      play.classList.remove('playing');
-    }
-  };
-
-  controls.append(play,label,range,val);
-  wrap.appendChild(controls);
-  return wrap;
-}
-
-/* -------------------------- wiring -------------------------- */
-document.getElementById('q').addEventListener('input',applyFilter);
-document.getElementById('pagesize').addEventListener('change',()=>{
-  state.pageSize=parseInt(document.getElementById('pagesize').value,10);
-  localStorage.setItem('pagesize',String(state.pageSize));
-  render();
-});
-const goPrev=()=>{ if(state.page>1){state.page--; render();}};
-const goNext=()=>{ const pages=Math.max(1,Math.ceil((state.filtered.length||0)/state.pageSize)); if(state.page<pages){state.page++; render();}};
-document.getElementById('prev').onclick=goPrev;
-document.getElementById('next').onclick=goNext;
-document.getElementById('prev2').onclick=goPrev;
-document.getElementById('next2').onclick=goNext;
-
-/* -------------------------- boot -------------------------- */
-(async function init(){
-  try{
-    await loadManifest();
-    await loadDefinitions();
-    applyFilter();
-  }catch(err){
-    console.error(err);
-    alert(err.message);
+  // Random/Sequential play picker (순차로 바꾸고 싶으면 여기를 수정)
+  const playIndexMap = {};
+  function pickNextUrlFor(key) {
+    const item = allItems.find(s => s.name === key);
+    if (!item || !item.files.length) return null;
+    playIndexMap[key] = (playIndexMap[key] || 0) + 1;
+    const i = (playIndexMap[key] - 1) % item.files.length;
+    return `https://1309-boy.github.io/playsoundlist/sounds_flat/${item.files[i]}.wav`;
   }
-})();
+
+  async function playItem(key, btn) {
+    if (currentAudio) {
+      try { currentAudio.pause(); } catch (e) {}
+      if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
+      currentAudio = null;
+      currentPlayBtn = null;
+      currentItemKey = null;
+    }
+
+    const src = pickNextUrlFor(key);
+    if (!src) {
+      alert('Sound not found: ' + key);
+      return;
+    }
+
+    const audio = new Audio(src);
+    audio.playbackRate = getPitchFor(key);
+    currentAudio = audio;
+    currentPlayBtn = btn;
+    currentItemKey = key;
+    btn.classList.add('playing');
+
+    audio.onended = () => {
+      if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
+      currentAudio = null;
+      currentPlayBtn = null;
+      currentItemKey = null;
+    };
+
+    try {
+      await audio.play();
+    } catch (err) {
+      alert('Playback blocked by browser. Click page first.');
+      btn.classList.remove('playing');
+    }
+  }
+
+  function stopItem(key) {
+    if (currentAudio && currentItemKey === key) {
+      try {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      } catch (e) {}
+      if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
+      currentAudio = null;
+      currentPlayBtn = null;
+      currentItemKey = null;
+    }
+  }
+
+  // Event delegation
+  document.addEventListener('click', (e) => {
+    const playBtn = e.target.closest('.btn.play');
+    if (playBtn) {
+      const card = playBtn.closest('.card');
+      const key = card?.dataset?.key;
+      if (key) playItem(key, playBtn);
+      return;
+    }
+
+    const stopBtn = e.target.closest('.btn.stop');
+    if (stopBtn) {
+      const card = stopBtn.closest('.card');
+      const key = card?.dataset?.key;
+      if (key) stopItem(key);
+      return;
+    }
+  });
+
+  // Pitch change
+  document.addEventListener('input', (e) => {
+    if (e.target.matches('.pitch')) {
+      const val = e.target.value;
+      const card = e.target.closest('.card');
+      const valEl = card.querySelector('.pitch-val');
+      valEl.textContent = val;
+      if (card?.dataset?.key === currentItemKey && currentAudio) {
+        currentAudio.playbackRate = parseFloat(val);
+      }
+    }
+  });
+
+  loadData();
 </script>
 </body>
 </html>
