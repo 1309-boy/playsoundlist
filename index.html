@@ -1,11 +1,12 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Playsound 리스트</title>
+<title>BE Playsound List</title>
 <style>
-  :root{--bg:#111;--fg:#e8e8e8;--muted:#9aa3ad;--card:#1b1b1b;--btn:#2a2a2a;--btn2:#3a3a3a}
+  :root{--bg:#111;--fg:#e8e8e8;--muted:#9aa3ad;--card:#1b1b1b;--btn:#2a2a2a;--btn2:#3a3a3a;
+        --play-bg:#1f6f3d; --play-border:#2ea043;}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
   header{display:flex;align-items:center;gap:.75rem;padding:.9rem 1rem;border-bottom:1px solid #222}
@@ -13,7 +14,7 @@
   .meta{opacity:.8}
   .grow{flex:1}
   input[type="search"]{width:100%;padding:.6rem .7rem;border-radius:.5rem;border:1px solid #2b2b2b;background:#0f0f0f;color:var(--fg)}
-  select,button{border:1px solid #2b2b2b;background:var(--btn);color:var(--fg);border-radius:.5rem;padding:.45rem .6rem}
+  select,button{border:1px solid #2b2b2b;background:var(--btn);color:var(--fg);border-radius:.5rem;padding:.45rem .6rem;cursor:pointer}
   button:hover{background:var(--btn2)}
   main{padding:1rem;max-width:980px;margin:0 auto}
   .row{background:var(--card);border:1px solid #222;border-radius:.8rem;margin:.6rem 0;padding:.8rem 1rem}
@@ -25,34 +26,39 @@
   .small{font-size:12px;color:var(--muted)}
   .divider{height:1px;background:#1e1e1e;margin:1rem 0}
   .pager{display:flex;gap:.5rem;align-items:center}
+  /* active playing button */
+  .play-btn.playing{
+    background: var(--play-bg) !important;
+    border-color: var(--play-border) !important;
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>Playsound 리스트</h1>
+  <h1>BE Playsound List</h1>
   <div class="meta" id="total"></div>
   <div class="grow"></div>
 </header>
 
 <main>
   <div class="toolbar">
-    <input id="q" type="search" placeholder="이벤트 이름 검색 (예: beacon.pow, ui.loom …)"/>
-    <select id="pagesize" title="페이지당 개수">
+    <input id="q" type="search" placeholder="Search events (e.g., beacon.power, ui.loom …)"/>
+    <select id="pagesize" title="Items per page">
       <option>50</option><option selected>100</option><option>150</option><option>200</option>
     </select>
   </div>
 
   <div class="pager">
-    <button id="prev">&lt; 이전</button>
-    <button id="next">다음 &gt;</button>
+    <button id="prev">&lt; Prev</button>
+    <button id="next">Next &gt;</button>
     <div class="small" id="pageinfo"></div>
   </div>
 
   <div id="list"></div>
 
   <div class="pager">
-    <button id="prev2">&lt; 이전</button>
-    <button id="next2">다음 &gt;</button>
+    <button id="prev2">&lt; Prev</button>
+    <button id="next2">Next &gt;</button>
     <div class="small" id="pageinfo2"></div>
   </div>
 
@@ -60,12 +66,12 @@
 </main>
 
 <script>
-/* -------------------------- 경로/상수 -------------------------- */
+/* -------------------------- paths / constants -------------------------- */
 const MANIFEST_URL    = './sounds_flat/manifest.json';
 const DEFINITIONS_URL = './sound_definitions.json';
 const WAV_PREFIX      = './sounds_flat/';
 
-/* -------------------------- 전역 상태 -------------------------- */
+/* -------------------------- app state -------------------------- */
 const state = {
   items: [], filtered: [], page: 1,
   pageSize: parseInt(localStorage.getItem('pagesize')||'100',10),
@@ -73,17 +79,17 @@ const state = {
 };
 const $  = s=>document.querySelector(s);
 
-/* -------------------------- WebAudio 플레이어 -------------------------- */
+/* -------------------------- WebAudio player -------------------------- */
 const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
 let current = { name:null, source:null, gain:null };
-const bufferCache = new Map();              // url -> Promise<AudioBuffer>
-const nextIndexByName = new Map();          // 라운드로빈 인덱스
+const bufferCache = new Map();      // url -> Promise<AudioBuffer>
+const nextIndexByName = new Map();  // round-robin index
 
 async function getBuffer(url){
   if(!bufferCache.has(url)){
     const p = (async ()=>{
       const r = await fetch(url,{cache:'force-cache'});
-      if(!r.ok) throw new Error(`파일 로드 실패: ${r.status} ${url}`);
+      if(!r.ok) throw new Error(`Failed to load file: ${r.status} ${url}`);
       const ab = await r.arrayBuffer();
       return await audioCtx.decodeAudioData(ab);
     })();
@@ -91,14 +97,17 @@ async function getBuffer(url){
   }
   return bufferCache.get(url);
 }
+function clearPlayingUI(){
+  document.querySelectorAll('.play-btn.playing').forEach(btn=>{
+    btn.classList.remove('playing');
+  });
+}
 function stopPlaying(){
   if(current.source){
     try{ current.source.stop(0); }catch{}
   }
   current = { name:null, source:null, gain:null };
-  document.querySelectorAll('.play-btn[data-playing="1"]').forEach(btn=>{
-    btn.dataset.playing='0'; btn.textContent='▶ 재생';
-  });
+  clearPlayingUI();
 }
 function nextUrl(it){
   const n = it.files.length;
@@ -108,24 +117,23 @@ function nextUrl(it){
   return it.files[idx % n];
 }
 async function playItem(it, pitch, forceNext=false){
-  // 다른 소리 재생 중이면 정지
+  // single-play: stop others
   if(current.name && current.name!==it.name) stopPlaying();
 
   const url = (forceNext || current.name!==it.name) ? nextUrl(it) : nextUrl(it);
   const buffer = await getBuffer(url);
 
-  // 새 소스/게인 노드
   const source = audioCtx.createBufferSource();
   source.buffer = buffer;
   source.playbackRate.value = pitch || 1.0;
 
   const gain = audioCtx.createGain();
-  gain.gain.value = 0.9;                    // 약간 낮춰 클리핑 방지
+  gain.gain.value = 0.9;
 
-  // (선택) 속도가 빨라질 때 고역 에일리어싱 줄이는 로우패스
+  // mild LPF to reduce aliasing at high pitch
   const lp = audioCtx.createBiquadFilter();
   lp.type = 'lowpass';
-  lp.frequency.value = Math.min( audioCtx.sampleRate/2, 12000 * (pitch||1) );
+  lp.frequency.value = Math.min(audioCtx.sampleRate/2, 12000 * (pitch||1));
   lp.Q.value = 0.707;
 
   source.connect(lp);
@@ -137,17 +145,17 @@ async function playItem(it, pitch, forceNext=false){
   source.start(0);
 }
 
-/* -------------------------- 데이터 로딩 -------------------------- */
+/* -------------------------- data loading -------------------------- */
 async function loadManifest(){
   const r = await fetch(MANIFEST_URL,{cache:'no-store'});
-  if(!r.ok) throw new Error(`manifest 로드 실패: HTTP ${r.status}`);
+  if(!r.ok) throw new Error(`Failed to load manifest: HTTP ${r.status}`);
   const j = await r.json();
   const urls = (j.entries||[]).map(e=>e.url).filter(Boolean);
   state.manifestSet = new Set(urls.map(u=>u.replace(/^\.\//,'')));
 }
 async function loadDefinitions(){
   const r = await fetch(DEFINITIONS_URL,{cache:'no-store'});
-  if(!r.ok) throw new Error(`sound_definitions 로드 실패: HTTP ${r.status}`);
+  if(!r.ok) throw new Error(`Failed to load sound_definitions: HTTP ${r.status}`);
   const defsAll = await r.json();
   const defs = defsAll.sound_definitions || defsAll;
 
@@ -169,7 +177,7 @@ async function loadDefinitions(){
   state.itemsByName = map;
 }
 
-/* -------------------------- 렌더/필터/페이징 -------------------------- */
+/* -------------------------- render / paging / filter -------------------------- */
 function applyFilter(){
   const q = $('#q').value.trim().toLowerCase();
   const tokens = q.split(/[ ,]+/).filter(Boolean);
@@ -184,27 +192,29 @@ function slicePage(){
 function render(){
   $('#pagesize').value = String(state.pageSize);
   const total = state.filtered.length;
-  $('#total').textContent = `총 ${total}개 이벤트`;
+  $('#total').textContent = `Total ${total} events`;
   const pages = Math.max(1, Math.ceil(total/state.pageSize));
   state.page = Math.min(state.page,pages);
-  $('#pageinfo').textContent = `총 ${pages}페이지 / 현재 ${state.page}페이지`;
-  $('#pageinfo2').textContent = `총 ${pages}페이지 / 현재 ${state.page}페이지`;
+  $('#pageinfo').textContent = `Page ${state.page} of ${pages}`;
+  $('#pageinfo2').textContent = `Page ${state.page} of ${pages}`;
 
   const frag = document.createDocumentFragment();
   for(const it of slicePage()) frag.appendChild(row(it));
   const L = document.getElementById('list'); L.innerHTML=''; L.appendChild(frag);
 }
 
-/* -------------------------- 행 DOM -------------------------- */
+/* -------------------------- row DOM -------------------------- */
 function row(it){
   const wrap=document.createElement('div'); wrap.className='row';
   const h=document.createElement('h3'); h.textContent=it.name; wrap.appendChild(h);
 
   const controls=document.createElement('div'); controls.className='controls';
 
-  const play=document.createElement('button'); play.textContent='▶ 재생'; play.className='play-btn'; play.dataset.playing='0';
+  const play=document.createElement('button');
+  play.textContent='Play';
+  play.className='play-btn';
 
-  const label=document.createElement('span'); label.className='label'; label.textContent='피치:';
+  const label=document.createElement('span'); label.className='label'; label.textContent='Pitch:';
 
   const range=document.createElement('input'); range.type='range'; range.min='0.1'; range.max='2.0'; range.step='0.1'; range.value='1.0';
   const val=document.createElement('span'); val.className='small'; val.textContent='1.0';
@@ -214,22 +224,18 @@ function row(it){
   });
 
   play.onclick = async ()=>{
-    // 같은 항목을 다시 누르면 → 다음 변형으로 전환
     const pitch=parseFloat(range.value);
-    if(current.name===it.name && play.dataset.playing==='1'){
-      await playItem(it,pitch,true);
-      return;
-    }
-    // UI 초기화 + 기존 재생 정지
-    document.querySelectorAll('.play-btn[data-playing="1"]').forEach(b=>{b.dataset.playing='0'; b.textContent='▶ 재생';});
-    stopPlaying(); // 혹시 남아있으면
-    play.dataset.playing='1'; play.textContent='⏸ 재생중';
+    // If this same item is already playing, move to next variant; else stop others & start here
+    const already = current.name===it.name && document.activeElement !== null;
+    // reset UI
+    clearPlayingUI();
+    play.classList.add('playing');
     try{
       await audioCtx.resume();
-      await playItem(it,pitch,false);
+      await playItem(it,pitch,already);
     }catch(err){
-      alert('재생에 실패했어요: '+err.message);
-      play.dataset.playing='0'; play.textContent='▶ 재생';
+      alert('Playback failed: '+err.message);
+      play.classList.remove('playing');
     }
   };
 
@@ -238,7 +244,7 @@ function row(it){
   return wrap;
 }
 
-/* -------------------------- 페이징/검색 이벤트 -------------------------- */
+/* -------------------------- wiring -------------------------- */
 document.getElementById('q').addEventListener('input',applyFilter);
 document.getElementById('pagesize').addEventListener('change',()=>{
   state.pageSize=parseInt(document.getElementById('pagesize').value,10);
@@ -252,7 +258,7 @@ document.getElementById('next').onclick=goNext;
 document.getElementById('prev2').onclick=goPrev;
 document.getElementById('next2').onclick=goNext;
 
-/* -------------------------- 초기화 -------------------------- */
+/* -------------------------- boot -------------------------- */
 (async function init(){
   try{
     await loadManifest();
