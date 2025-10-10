@@ -28,13 +28,13 @@
   <meta property="og:title" content="BE Playsound List - Minecraft Bedrock Edition Sound Library">
   <meta property="og:description" content="A complete searchable sound library for Minecraft Bedrock Edition — listen to all playsound events directly in your browser.">
   <meta property="og:url" content="https://playsoundlist.xyz/">
-  <meta property="og:image" content="https://playsoundlist.xyz/icon.png">
+  <meta property="og:image" content="https://playsoundlist.xyz/assets/og-image.png">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="BE Playsound List - Minecraft Bedrock Edition Sound Library">
   <meta name="twitter:description" content="Listen to every Minecraft BE sound event, all in one searchable sound library.">
-  <meta name="twitter:image" content="https://playsoundlist.xyz/icon.png">
+  <meta name="twitter:image" content="https://playsoundlist.xyz/assets/og-image.png">
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
@@ -114,16 +114,17 @@ const state = {
   pageSize: 100,
 };
 
-const playIndex = {};
-let currentAudio = null;
+const playIndex = {};                 // name -> next index (round-robin)
 let currentKey   = null;
 let currentPlayBtn = null;
 
-/* autoplay unlock flags */
-let audioUnlocked = false;
+/* WebAudio */
 let webCtx = null;
+let audioUnlocked = false;
+let currentSrcNode = null;            // AudioBufferSourceNode
+const bufferCache = new Map();        // url -> AudioBuffer
 
-/* ------------- helpers ---------------- */
+/* ------------- helpers: DOM refs ---------------- */
 const $list   = document.getElementById('list');
 const $count  = document.getElementById('count');
 const $q      = document.getElementById('q');
@@ -132,25 +133,40 @@ const $prev   = document.getElementById('prev');
 const $next   = document.getElementById('next');
 const $pagesize = document.getElementById('pagesize');
 
-/* ----------------- utils -------------------- */
-function normalizeDefSound(s){ if(!s)return null; if(typeof s==='string')return{name:s}; if(s.name)return{name:s.name}; return null;}
+/* ------------- normalize / mapping -------------- */
+function normalizeDefSound(s){ if(!s) return null; if(typeof s==='string') return {name:s}; if(s.name) return {name:s.name}; return null; }
 function soundToBasePath(s){ return s.replace(/^sounds\//,''); }
 function baseToUrl(base){ return `${GH_BASE}/sounds_flat/${base}.wav`; }
-function inManifest(url){ if(state.manifestSet.has(url))return true; const rel=url.replace(`${GH_BASE}/`,''); if(state.manifestSet.has(rel))return true; const onlyPath=url.replace(/^https?:\/\/[^/]+\//,''); return state.manifestSet.has(onlyPath); }
+
+/* manifest membership check */
+function inManifest(url){
+  if (state.manifestSet.has(url)) return true;
+  const rel = url.replace(`${GH_BASE}/`,'');
+  if (state.manifestSet.has(rel)) return true;
+  const onlyPath = url.replace(/^https?:\/\/[^/]+\//,'');
+  return state.manifestSet.has(onlyPath);
+}
 
 /* ----------------- rendering -------------------- */
-function fmtPage(){ const total=state.filtered.length; const pages=Math.max(1,Math.ceil(total/state.pageSize)); const page=Math.min(state.page+1,pages); $pageinfo.textContent=`Page ${page} of ${pages}`; }
+function fmtPage(){
+  const total = state.filtered.length;
+  const pages = Math.max(1, Math.ceil(total / state.pageSize));
+  const page  = Math.min(state.page + 1, pages);
+  $pageinfo.textContent = `Page ${page} of ${pages}`;
+}
 
 function render(){
-  $list.innerHTML='';
-  const start=state.page*state.pageSize;
-  const end=Math.min(start+state.pageSize,state.filtered.length);
-  const items=state.filtered.slice(start,end);
-  for(const item of items){
-    const card=document.createElement('div');
-    card.className='card';
-    card.dataset.key=item.name;
-    card.innerHTML=`
+  $list.innerHTML = '';
+  const start = state.page * state.pageSize;
+  const end   = Math.min(start + state.pageSize, state.filtered.length);
+  const items = state.filtered.slice(start, end);
+
+  for (const item of items){
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.key = item.name;
+
+    card.innerHTML = `
       <div class="title">${item.name}</div>
       <div class="row">
         <button class="btn play">Play</button>
@@ -160,40 +176,54 @@ function render(){
         <span class="label">Pitch:</span>
         <input class="pitch" type="range" min="0.1" max="2.0" step="0.1" value="1.0"/>
         <span class="pitch-val">1.0</span>
-      </div>`;
+      </div>
+    `;
     $list.appendChild(card);
   }
-  $count.textContent=`Showing ${start+1}-${end} of ${state.filtered.length} sounds`;
+
+  $count.textContent = `Showing ${start+1}-${end} of ${state.filtered.length} sounds`;
   fmtPage();
 }
 
 /* ----------------- events ----------------------- */
 $q.addEventListener('input', applyFilter);
-$pagesize.addEventListener('change', ()=>{ state.pageSize=parseInt($pagesize.value,10); state.page=0; render(); });
-$prev.addEventListener('click', ()=>{ if(state.page>0){ state.page--; render(); } });
-$next.addEventListener('click', ()=>{ const pages=Math.ceil(state.filtered.length/state.pageSize); if(state.page<pages-1){ state.page++; render(); } });
+$pagesize.addEventListener('change', ()=>{
+  state.pageSize = parseInt($pagesize.value,10);
+  state.page = 0;
+  render();
+});
+$prev.addEventListener('click', ()=>{
+  if (state.page>0){ state.page--; render(); }
+});
+$next.addEventListener('click', ()=>{
+  const pages = Math.ceil(state.filtered.length / state.pageSize);
+  if (state.page < pages-1){ state.page++; render(); }
+});
 
-document.addEventListener('input',(e)=>{
-  if(!e.target.matches('.pitch'))return;
-  const card=e.target.closest('.card');
-  const key=card?.dataset?.key;
-  card.querySelector('.pitch-val').textContent=e.target.value;
-  if(currentAudio&&currentKey===key){ currentAudio.playbackRate=parseFloat(e.target.value||'1.0'); }
+document.addEventListener('input', (e)=>{
+  if (!e.target.matches('.pitch')) return;
+  const card = e.target.closest('.card');
+  const key  = card?.dataset?.key;
+  card.querySelector('.pitch-val').textContent = e.target.value;
+  // 재생 중이면 실시간으로 WebAudio 속도 업데이트
+  if (currentSrcNode && currentKey === key){
+    currentSrcNode.playbackRate.value = parseFloat(e.target.value || '1.0');
+  }
 });
 
 document.addEventListener('click',(e)=>{
-  const playBtn=e.target.closest('.btn.play');
-  if(playBtn){
-    const card=playBtn.closest('.card');
-    const key=card?.dataset?.key;
-    if(key)playKey(key,playBtn);
+  const playBtn = e.target.closest('.btn.play');
+  if (playBtn){
+    const card = playBtn.closest('.card');
+    const key = card?.dataset?.key;
+    if (key) playKey(key, playBtn);
     return;
   }
-  const stopBtn=e.target.closest('.btn.stop');
-  if(stopBtn){
-    const card=stopBtn.closest('.card');
-    const key=card?.dataset?.key;
-    if(key)stopKey(key);
+  const stopBtn = e.target.closest('.btn.stop');
+  if (stopBtn){
+    const card = stopBtn.closest('.card');
+    const key = card?.dataset?.key;
+    if (key) stopKey(key);
   }
 });
 
@@ -203,133 +233,173 @@ document.addEventListener('click',(e)=>{
 });
 async function unlockAudio(){
   try{
-    const AC=window.AudioContext||window.webkitAudioContext;
-    if(AC){
-      webCtx=new AC();
-      if(webCtx.state==='suspended')await webCtx.resume();
-      const buf=webCtx.createBuffer(1,1,22050);
-      const src=webCtx.createBufferSource();
-      src.buffer=buf; src.connect(webCtx.destination); src.start(0);
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC && !webCtx){
+      webCtx = new AC();
     }
-    const a=new Audio('data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
-    a.volume=0; a.play().then(()=>{a.pause();a.currentTime=0;}).catch(()=>{});
-    audioUnlocked=true;
+    if (webCtx && webCtx.state === 'suspended') await webCtx.resume();
+
+    // 무음 1샘플로 iOS 등 오디오 잠금 해제
+    const buf = webCtx.createBuffer(1,1,22050);
+    const src = webCtx.createBufferSource();
+    src.buffer = buf; src.connect(webCtx.destination); src.start(0);
+
+    audioUnlocked = true;
   }catch(_){}
+}
+
+/* ----------------- WebAudio helpers ------------- */
+async function getBuffer(url){
+  if (bufferCache.has(url)) return bufferCache.get(url);
+  const r = await fetch(url, {cache:'force-cache'});
+  if (!r.ok) throw new Error(`audio fetch failed ${r.status}`);
+  const ab = await r.arrayBuffer();
+  const buf = await webCtx.decodeAudioData(ab);
+  bufferCache.set(url, buf);
+  return buf;
+}
+
+function stopCurrent(){
+  if (currentSrcNode){
+    try { currentSrcNode.stop(0); } catch(_){}
+    currentSrcNode.disconnect?.();
+  }
+  if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
+  currentSrcNode = null;
+  currentPlayBtn = null;
+  currentKey = null;
 }
 
 /* ----------------- logic: play/stop ------------- */
 function nextUrlFor(key){
-  const item=state.itemsByName.get(key);
-  if(!item||!item.files?.length)return null;
-  const idx=((playIndex[key]||0)%item.files.length);
-  playIndex[key]=idx+1;
+  const item = state.itemsByName.get(key);
+  if (!item || !item.files?.length) return null;
+  const idx = ((playIndex[key]||0) % item.files.length);
+  playIndex[key] = idx + 1;
   return baseToUrl(item.files[idx]);
 }
 
-async function playKey(key,btn){
-  // stop any currently playing sound & reset button
-if (currentAudio) {
-  try { 
-    currentAudio.pause(); 
-    currentAudio.currentTime = 0; 
-  } catch(e){}
-  if (currentPlayBtn) {
-    currentPlayBtn.classList.remove('playing');
+async function playKey(key, btn){
+  const url = nextUrlFor(key);
+  if (!url || !inManifest(url)){
+    console.warn('Sound not found or not in manifest:', key);
+    return;
   }
-  currentAudio = null;
-  currentKey = null;
-  currentPlayBtn = null;
-}
 
-  const url=nextUrlFor(key);
-  if(!url||!inManifest(url)){ console.warn('Sound not found or not in manifest:',key); return; }
+  // 준비
+  try{
+    if (!audioUnlocked) await unlockAudio();
+    if (!webCtx){ await unlockAudio(); }
+  }catch(_){}
 
-  const card=document.querySelector(`.card[data-key="${CSS.escape(key)}"]`);
-  const pitch=parseFloat(card.querySelector('.pitch').value||'1.0');
+  // 현재 재생 중이면 정지
+  stopCurrent();
 
-  const audio=new Audio(url);
-  audio.crossOrigin='anonymous';
-  audio.preload='auto';
-  audio.playbackRate=pitch;
-
-  currentAudio=audio; currentKey=key; currentPlayBtn=btn;
-  btn.classList.add('playing');
-
-  audio.onended=()=>{ if(currentPlayBtn)currentPlayBtn.classList.remove('playing'); currentAudio=null; currentKey=null; currentPlayBtn=null; };
+  // 재생할 피치 읽기
+  const card = document.querySelector(`.card[data-key="${CSS.escape(key)}"]`);
+  const rate = parseFloat(card.querySelector('.pitch').value || '1.0');
 
   try{
-    if(!audioUnlocked)await unlockAudio();
-    await audio.play();
- }catch(err){    
-  console.debug('play() failed:', err?.name || err);    
-  if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
-  currentAudio = null; currentKey = null; currentPlayBtn = null;
-}
+    const buf = await getBuffer(url);
+    const src = webCtx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = isFinite(rate) ? rate : 1.0;
+    src.connect(webCtx.destination);
+
+    currentSrcNode = src;
+    currentKey = key;
+    currentPlayBtn = btn;
+    btn.classList.add('playing');
+
+    src.onended = ()=>{ stopCurrent(); };
+    src.start(0);
+  }catch(err){
+    console.debug('WebAudio play failed:', err?.message || err);
+    stopCurrent();
+  }
 }
 
 function stopKey(key){
-  if(currentAudio&&currentKey===key){
-    try{ currentAudio.pause(); currentAudio.currentTime=0; }catch(e){}
-    if(currentPlayBtn)currentPlayBtn.classList.remove('playing');
-    currentAudio=null; currentKey=null; currentPlayBtn=null;
+  if (currentSrcNode && currentKey === key){
+    stopCurrent();
   }
 }
 
 /* ----------------- filtering -------------------- */
 function applyFilter(){
-  const q=($q.value||'').toLowerCase().trim();
-  state.filtered=!q?state.items.slice():state.items.filter(it=>it.name.toLowerCase().includes(q));
-  state.page=0; render();
+  const q = ($q.value || '').toLowerCase().trim();
+  state.filtered = !q ? state.items.slice()
+                      : state.items.filter(it => it.name.toLowerCase().includes(q));
+  state.page = 0;
+  render();
 }
 
 /* ----------------- loading ---------------------- */
 async function loadManifest(){
-  const r=await fetch(MANIFEST_URL,{cache:'no-store'});
-  if(!r.ok)throw new Error(`manifest load failed: HTTP ${r.status}`);
-  const j=await r.json();
-  let urls=[];
-  if(Array.isArray(j))urls=j;
-  else if(Array.isArray(j.entries))urls=j.entries.map(e=>e.url).filter(Boolean);
-  else if(Array.isArray(j.urls))urls=j.urls;
-  else if(j.files&&Array.isArray(j.files))urls=j.files;
-  const s=new Set();
-  for(const u of urls){
-    if(!u)continue;
+  const r = await fetch(MANIFEST_URL, {cache:'no-store'});
+  if (!r.ok) throw new Error(`manifest load failed: HTTP ${r.status}`);
+  const j = await r.json();
+
+  let urls = [];
+  if (Array.isArray(j)) urls = j;
+  else if (Array.isArray(j.entries)) urls = j.entries.map(e=>e.url).filter(Boolean);
+  else if (Array.isArray(j.urls)) urls = j.urls;
+  else if (j.files && Array.isArray(j.files)) urls = j.files;
+
+  const s = new Set();
+  for (const u of urls){
+    if (!u) continue;
     s.add(u);
-    const rel=u.replace(`${GH_BASE}/`,'');
+    const rel = u.replace(`${GH_BASE}/`,'');
     s.add(rel);
-    const onlyPath=u.replace(/^https?:\/\/[^/]+\//,'');
+    const onlyPath = u.replace(/^https?:\/\/[^/]+\//,'');
     s.add(onlyPath);
   }
-  state.manifestSet=s;
+  state.manifestSet = s;
 }
 
 async function loadDefinitions(){
-  const r=await fetch(DEFINITIONS_URL,{cache:'no-store'});
-  if(!r.ok)throw new Error(`sound_definitions load failed: HTTP ${r.status}`);
-  const defsAll=await r.json();
-  const defs=defsAll.sound_definitions||defsAll;
-  const items=[]; const map=new Map();
-  for(const [key,def] of Object.entries(defs)){
-    if(!def||!Array.isArray(def.sounds))continue;
-    const files=def.sounds.map(normalizeDefSound).filter(Boolean).map(s=>soundToBasePath(s.name)).filter(Boolean).filter(base=>inManifest(baseToUrl(base)));
-    if(!files.length)continue;
-    const item={name:key,files,stream:!!def.stream};
+  const r = await fetch(DEFINITIONS_URL, {cache:'no-store'});
+  if (!r.ok) throw new Error(`sound_definitions load failed: HTTP ${r.status}`);
+  const defsAll = await r.json();
+  const defs = defsAll.sound_definitions || defsAll;
+
+  const items = [];
+  const map = new Map();
+
+  for (const [key, def] of Object.entries(defs)){
+    if (!def || !Array.isArray(def.sounds)) continue;
+
+    const files = def.sounds
+      .map(normalizeDefSound)
+      .filter(Boolean)
+      .map(s => soundToBasePath(s.name))
+      .filter(Boolean)
+      .filter(base => inManifest(baseToUrl(base)));
+
+    if (!files.length) continue;
+
+    const item = { name: key, files, stream: !!def.stream };
     items.push(item);
-    map.set(key,item);
+    map.set(key, item);
   }
+
   items.sort((a,b)=>a.name.localeCompare(b.name));
-  state.items=items; state.itemsByName=map; state.filtered=items.slice();
+  state.items = items;
+  state.itemsByName = map;
+  state.filtered = items.slice();
 }
 
 /* ----------------- init ------------------------- */
 (async function init(){
   try{
-    state.pageSize=parseInt($pagesize.value,10);
+    state.pageSize = parseInt($pagesize.value,10);
     await loadManifest();
     await loadDefinitions();
     render();
-  }catch(err){ console.error(err); }
+  }catch(err){
+    console.error(err);
+  }
 })();
 </script>
 </body>
