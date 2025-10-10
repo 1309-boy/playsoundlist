@@ -1,31 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>BE Playsound List</title>
-<style>
-  :root { --bg:#111; --panel:#1a1a1a; --line:#2c2c2c; --muted:#aaa; --fg:#eee; --accent:#16a34a; }
-  html,body{margin:0;padding:0;background:#111;color:#eee;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
-  .wrap{max-width:960px;margin:0 auto;padding:18px;}
-  h1{margin:8px 0 18px;text-align:center;color:#90caf9;font-weight:800;letter-spacing:.5px}
-  .toolbar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
-  .search{flex:1 1 440px;max-width:560px}
-  .search input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#222;color:var(--fg);outline:none}
-  .pagesize select{padding:9px 10px;border-radius:10px;background:#222;border:1px solid var(--line);color:var(--fg)}
-  .pager{display:flex;gap:8px;align-items:center;justify-content:center;margin:8px 0 14px}
-  .muted{color:var(--muted);font-size:.92rem}
-  button{cursor:pointer}
-  .btn{padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:#2b2b2b;color:#eee}
-  .btn:hover{background:#3a3a3a}
-  .btn.play.playing{background:var(--accent);border-color:var(--accent);color:#000}
-  .list{display:flex;flex-direction:column;gap:12px;margin-bottom:40px}
-  .card{background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-  .title{font-weight:700;margin-bottom:8px;word-break:break-word}
-  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
-  .label{color:var(--muted)}
-  input[type="range"]{width:240px}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BE Playsound List</title>
+
+  <!-- ===== SEO basics ===== -->
+  <meta name="description" content="Search and play Minecraft Bedrock Edition sound events in your browser. Filter by name, tweak pitch, and preview instantly.">
+  <meta name="keywords" content="minecraft, bedrock, playsound, sound list, sound events, audio preview">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <link rel="canonical" href="https://playsoundlist.xyz/">
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="BE Playsound List">
+  <meta property="og:description" content="Browse, search, and preview Minecraft Bedrock sound events.">
+  <meta property="og:url" content="https://playsoundlist.xyz/">
+  <!-- If you prepare an image, uncomment the next line and set the absolute URL -->
+  <!-- <meta property="og:image" content="https://playsoundlist.xyz/og-image.png"> -->
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="BE Playsound List">
+  <meta name="twitter:description" content="Browse, search, and preview Minecraft Bedrock sound events.">
+  <!-- <meta name="twitter:image" content="https://playsoundlist.xyz/og-image.png"> -->
+
+  <!-- JSON-LD: WebSite with SearchAction -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "BE Playsound List",
+    "url": "https://playsoundlist.xyz/",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://playsoundlist.xyz/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <!-- Perf: preconnect to assets host (GitHub Pages) -->
+  <link rel="dns-prefetch" href="https://1309-boy.github.io">
+  <link rel="preconnect" href="https://1309-boy.github.io" crossorigin>
+
+  <!-- PWA/Chrome UI niceties (optional) -->
+  <meta name="theme-color" content="#111">
+
+  <!-- (Optional) GA4: replace G-XXXXXXX with your Measurement ID
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXX');
+  </script>
+  -->
+
+  <style>
+    :root { --bg:#111; --panel:#1a1a1a; --line:#2c2c2c; --muted:#aaa; --fg:#eee; --accent:#16a34a; }
+    html,body{margin:0;padding:0;background:#111;color:#eee;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+    .wrap{max-width:960px;margin:0 auto;padding:18px;}
+    h1{margin:8px 0 18px;text-align:center;color:#90caf9;font-weight:800;letter-spacing:.5px}
+    .toolbar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+    .search{flex:1 1 440px;max-width:560px}
+    .search input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#222;color:var(--fg);outline:none}
+    .pagesize select{padding:9px 10px;border-radius:10px;background:#222;border:1px solid var(--line);color:var(--fg)}
+    .pager{display:flex;gap:8px;align-items:center;justify-content:center;margin:8px 0 14px}
+    .muted{color:var(--muted);font-size:.92rem}
+    button{cursor:pointer}
+    .btn{padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:#2b2b2b;color:#eee}
+    .btn:hover{background:#3a3a3a}
+    .btn.play.playing{background:var(--accent);border-color:var(--accent);color:#000}
+    .list{display:flex;flex-direction:column;gap:12px;margin-bottom:40px}
+    .card{background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+    .title{font-weight:700;margin-bottom:8px;word-break:break-word}
+    .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
+    .label{color:var(--muted)}
+    input[type="range"]{width:240px}
+  </style>
 </head>
 <body>
   <div class="wrap">
@@ -197,7 +251,7 @@ async function unlockAudio(){
       const src = webCtx.createBufferSource();
       src.buffer = buf; src.connect(webCtx.destination); src.start(0);
     }
-    const a = new Audio('data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+    const a = new Audio('data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGlinZwAAAA8AAAACAAACcQCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
     a.volume = 0; a.play().then(()=>{ a.pause(); a.currentTime = 0; }).catch(()=>{});
     audioUnlocked = true;
   }catch(_){}
@@ -246,7 +300,7 @@ async function playKey(key, btn){
     if (!audioUnlocked) await unlockAudio();
     await audio.play();
   }catch(err){
-    // 조용히 실패 처리
+    // fail silently to avoid UX popups
     console.debug('play() blocked or failed quietly:', err?.name || err);
     btn.classList.remove('playing');
     currentAudio = null; currentKey = null; currentPlayBtn = null;
@@ -338,7 +392,7 @@ async function loadDefinitions(){
     render();
   }catch(err){
     console.error(err);
-    // 조용히 실패 (화면 알림 없음)
+    // silent UI
   }
 })();
 </script>
