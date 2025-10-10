@@ -97,18 +97,23 @@ async function getBuffer(url){
   }
   return bufferCache.get(url);
 }
+
 function clearPlayingUI(){
   document.querySelectorAll('.play-btn.playing').forEach(btn=>{
     btn.classList.remove('playing');
   });
 }
-function stopPlaying(){
-  if(current.source){
-    try{ current.source.stop(0); }catch{}
+
+/* stop ONLY the current source, safely (detach onended to avoid race) */
+function stopCurrentSafely(){
+  const src = current.source;
+  if(src){
+    try { src.onended = null; src.stop(0); } catch {}
   }
   current = { name:null, source:null, gain:null };
   clearPlayingUI();
 }
+
 function nextUrl(it){
   const n = it.files.length;
   if(n===1) return it.files[0];
@@ -116,11 +121,14 @@ function nextUrl(it){
   nextIndexByName.set(it.name, (idx+1)%n);
   return it.files[idx % n];
 }
-async function playItem(it, pitch, forceNext=false){
-  // single-play: stop others
-  if(current.name && current.name!==it.name) stopPlaying();
 
-  const url = (forceNext || current.name!==it.name) ? nextUrl(it) : nextUrl(it);
+async function playItem(it, pitch, forceNext=false){
+  // if another item is playing, stop it WITHOUT triggering its onended cleanup on the new one
+  if(current.name && current.name!==it.name){
+    stopCurrentSafely();
+  }
+
+  const url = nextUrl(it);  // round-robin every click
   const buffer = await getBuffer(url);
 
   const source = audioCtx.createBufferSource();
@@ -140,7 +148,13 @@ async function playItem(it, pitch, forceNext=false){
   lp.connect(gain);
   gain.connect(audioCtx.destination);
 
-  source.onended = ()=> stopPlaying();
+  // Guard: only stop if THIS source is still current
+  source.onended = ()=>{
+    if(current.source === source){
+      stopCurrentSafely();
+    }
+  };
+
   current = { name:it.name, source, gain };
   source.start(0);
 }
@@ -225,14 +239,13 @@ function row(it){
 
   play.onclick = async ()=>{
     const pitch=parseFloat(range.value);
-    // If this same item is already playing, move to next variant; else stop others & start here
-    const already = current.name===it.name && document.activeElement !== null;
-    // reset UI
+    // UI: remove old green state first
     clearPlayingUI();
-    play.classList.add('playing');
     try{
       await audioCtx.resume();
-      await playItem(it,pitch,already);
+      await playItem(it,pitch,true);
+      // success → mark this button green
+      play.classList.add('playing');
     }catch(err){
       alert('Playback failed: '+err.message);
       play.classList.remove('playing');
