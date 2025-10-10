@@ -273,8 +273,8 @@ async function loadManifest(){
 async function loadDefinitions(){
   const r = await fetch(DEFINITIONS_URL, {cache:'no-store'});
   if(!r.ok) throw new Error(`sound_definitions 로드 실패: HTTP ${r.status}`);
-  const defs = await r.json(); // 최상위가 { "ambient.xxx": { sounds:[...] }, ... }
-
+  const defsAll = await r.json();
+  const defs = defsAll.sound_definitions || defsAll;  // ✅ 추가된 핵심 라인
   const items = [];
   const map = new Map();
 
