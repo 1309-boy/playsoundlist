@@ -56,7 +56,7 @@ const DEFINITIONS_URL = `${GH_BASE}/sound_definitions.json`;
 
 /* -------------------- state --------------------- */
 const state = {
-  items: [],            // [{name, files:[<basepath>], stream?}]
+  items: [],
   filtered: [],
   itemsByName: new Map(),
   manifestSet: new Set(),
@@ -68,6 +68,10 @@ const playIndex = {};   // name -> next index
 let currentAudio = null;
 let currentKey   = null;
 let currentPlayBtn = null;
+
+/* autoplay unlock flags */
+let audioUnlocked = false;
+let webCtx = null;
 
 /* ------------- helpers: DOM refs ---------------- */
 const $list   = document.getElementById('list');
@@ -86,15 +90,11 @@ function normalizeDefSound(s) {
   return null;
 }
 function soundToBasePath(s) {
-  // strip "sounds/" prefix -> keep path after it
-  // e.g. "sounds/ambient/nether/mood1" -> "ambient/nether/mood1"
-  return s.replace(/^sounds\//,'');
+  return s.replace(/^sounds\//,''); // "sounds/..." -> "..."
 }
-function baseToUrl(base){ // base = "ambient/.../mood1"
-  return `${GH_BASE}/sounds_flat/${base}.wav`;
-}
+function baseToUrl(base){ return `${GH_BASE}/sounds_flat/${base}.wav`; }
 
-/* manifest membership check (robust to absolute/relative) */
+/* manifest membership check */
 function inManifest(url){
   if (state.manifestSet.has(url)) return true;
   const rel = url.replace(`${GH_BASE}/`,'');
@@ -183,6 +183,26 @@ document.addEventListener('click',(e)=>{
   }
 });
 
+/* ----------- autoplay unlock on first gesture --- */
+['pointerdown','touchstart','keydown','mousedown'].forEach(evt=>{
+  window.addEventListener(evt, unlockAudio, { once:true, passive:true });
+});
+async function unlockAudio(){
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC){
+      webCtx = new AC();
+      if (webCtx.state === 'suspended') await webCtx.resume();
+      const buf = webCtx.createBuffer(1, 1, 22050);
+      const src = webCtx.createBufferSource();
+      src.buffer = buf; src.connect(webCtx.destination); src.start(0);
+    }
+    const a = new Audio('data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAACcQCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+    a.volume = 0; a.play().then(()=>{ a.pause(); a.currentTime = 0; }).catch(()=>{});
+    audioUnlocked = true;
+  }catch(_){}
+}
+
 /* ----------------- logic: play/stop ------------- */
 function nextUrlFor(key){
   const item = state.itemsByName.get(key);
@@ -202,7 +222,7 @@ async function playKey(key, btn){
 
   const url = nextUrlFor(key);
   if (!url || !inManifest(url)){
-    alert('Sound not found: ' + key);
+    console.warn('Sound not found or not in manifest:', key);
     return;
   }
 
@@ -210,7 +230,10 @@ async function playKey(key, btn){
   const pitch = parseFloat(card.querySelector('.pitch').value || '1.0');
 
   const audio = new Audio(url);
+  audio.crossOrigin = 'anonymous';
+  audio.preload = 'auto';
   audio.playbackRate = pitch;
+
   currentAudio = audio; currentKey = key; currentPlayBtn = btn;
   btn.classList.add('playing');
 
@@ -219,10 +242,14 @@ async function playKey(key, btn){
     currentAudio = null; currentKey = null; currentPlayBtn = null;
   };
 
-  try{ await audio.play(); }
-  catch(err){
+  try{
+    if (!audioUnlocked) await unlockAudio();
+    await audio.play();
+  }catch(err){
+    // 조용히 실패 처리
+    console.debug('play() blocked or failed quietly:', err?.name || err);
     btn.classList.remove('playing');
-    alert('Playback blocked by browser. Click anywhere on the page then try again.');
+    currentAudio = null; currentKey = null; currentPlayBtn = null;
   }
 }
 
@@ -252,13 +279,12 @@ async function loadManifest(){
   if (!r.ok) throw new Error(`manifest load failed: HTTP ${r.status}`);
   const j = await r.json();
 
-  // try several shapes
   let urls = [];
   if (Array.isArray(j)) urls = j;
   else if (Array.isArray(j.entries)) urls = j.entries.map(e=>e.url).filter(Boolean);
   else if (Array.isArray(j.urls)) urls = j.urls;
   else if (j.files && Array.isArray(j.files)) urls = j.files;
-  // store multiple canonical forms
+
   const s = new Set();
   for (const u of urls){
     if (!u) continue;
@@ -275,7 +301,7 @@ async function loadDefinitions(){
   const r = await fetch(DEFINITIONS_URL, {cache:'no-store'});
   if (!r.ok) throw new Error(`sound_definitions load failed: HTTP ${r.status}`);
   const defsAll = await r.json();
-  const defs = defsAll.sound_definitions || defsAll; // ★ 중요: 실제 사운드가 이 안에 있음
+  const defs = defsAll.sound_definitions || defsAll;
 
   const items = [];
   const map = new Map();
@@ -288,7 +314,7 @@ async function loadDefinitions(){
       .filter(Boolean)
       .map(s => soundToBasePath(s.name))
       .filter(Boolean)
-      .filter(base => inManifest(baseToUrl(base))); // 실제 wav만
+      .filter(base => inManifest(baseToUrl(base)));
 
     if (!files.length) continue;
 
@@ -312,7 +338,7 @@ async function loadDefinitions(){
     render();
   }catch(err){
     console.error(err);
-    alert(err.message);
+    // 조용히 실패 (화면 알림 없음)
   }
 })();
 </script>
