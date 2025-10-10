@@ -80,7 +80,9 @@ function absoluteFromManifest(rel) {
   try {
     const base = manifestUrlUsed ?? location.href;
     const baseDir = base.replace(/manifest\.json.*$/i, '');
-    return new URL(rel, baseDir).href;
+    // 🩵 "sounds_flat/sounds_flat/..." 중복 방지
+    const relFixed = rel.replace(/^sounds_flat\//, '');
+    return new URL('sounds_flat/' + relFixed, baseDir).href;
   } catch (e) {
     return rel.startsWith('/') ? rel : '/' + rel;
   }
