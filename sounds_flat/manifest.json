@@ -97,6 +97,132 @@
       "type": "wav"
     },
     {
+      "id": "minecraft:ambient/underwater/additions/bubbles1",
+      "label": "ambient/underwater/additions/bubbles1",
+      "url": "sounds_flat/ambient/underwater/additions/bubbles1.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions/bubbles2",
+      "label": "ambient/underwater/additions/bubbles2",
+      "url": "sounds_flat/ambient/underwater/additions/bubbles2.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions/bubbles3",
+      "label": "ambient/underwater/additions/bubbles3",
+      "url": "sounds_flat/ambient/underwater/additions/bubbles3.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions/bubbles4",
+      "label": "ambient/underwater/additions/bubbles4",
+      "url": "sounds_flat/ambient/underwater/additions/bubbles4.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions/bubbles5",
+      "label": "ambient/underwater/additions/bubbles5",
+      "url": "sounds_flat/ambient/underwater/additions/bubbles5.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions/bubbles6",
+      "label": "ambient/underwater/additions/bubbles6",
+      "url": "sounds_flat/ambient/underwater/additions/bubbles6.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions/water1",
+      "label": "ambient/underwater/additions/water1",
+      "url": "sounds_flat/ambient/underwater/additions/water1.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions/water2",
+      "label": "ambient/underwater/additions/water2",
+      "url": "sounds_flat/ambient/underwater/additions/water2.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_rare/animal1",
+      "label": "ambient/underwater/additions_rare/animal1",
+      "url": "sounds_flat/ambient/underwater/additions_rare/animal1.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_rare/bass_whale1",
+      "label": "ambient/underwater/additions_rare/bass_whale1",
+      "url": "sounds_flat/ambient/underwater/additions_rare/bass_whale1.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_rare/bass_whale2",
+      "label": "ambient/underwater/additions_rare/bass_whale2",
+      "url": "sounds_flat/ambient/underwater/additions_rare/bass_whale2.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_rare/crackles1",
+      "label": "ambient/underwater/additions_rare/crackles1",
+      "url": "sounds_flat/ambient/underwater/additions_rare/crackles1.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_rare/crackles2",
+      "label": "ambient/underwater/additions_rare/crackles2",
+      "url": "sounds_flat/ambient/underwater/additions_rare/crackles2.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_rare/driplets1",
+      "label": "ambient/underwater/additions_rare/driplets1",
+      "url": "sounds_flat/ambient/underwater/additions_rare/driplets1.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_rare/driplets2",
+      "label": "ambient/underwater/additions_rare/driplets2",
+      "url": "sounds_flat/ambient/underwater/additions_rare/driplets2.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_rare/earth_crack",
+      "label": "ambient/underwater/additions_rare/earth_crack",
+      "url": "sounds_flat/ambient/underwater/additions_rare/earth_crack.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_ultrarare/animal2",
+      "label": "ambient/underwater/additions_ultrarare/animal2",
+      "url": "sounds_flat/ambient/underwater/additions_ultrarare/animal2.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_ultrarare/dark1",
+      "label": "ambient/underwater/additions_ultrarare/dark1",
+      "url": "sounds_flat/ambient/underwater/additions_ultrarare/dark1.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_ultrarare/dark2",
+      "label": "ambient/underwater/additions_ultrarare/dark2",
+      "url": "sounds_flat/ambient/underwater/additions_ultrarare/dark2.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_ultrarare/dark3",
+      "label": "ambient/underwater/additions_ultrarare/dark3",
+      "url": "sounds_flat/ambient/underwater/additions_ultrarare/dark3.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/additions_ultrarare/dark4",
+      "label": "ambient/underwater/additions_ultrarare/dark4",
+      "url": "sounds_flat/ambient/underwater/additions_ultrarare/dark4.wav",
+      "type": "wav"
+    },
+    {
       "id": "minecraft:ambient/underwater/enter1",
       "label": "ambient/underwater/enter1",
       "url": "sounds_flat/ambient/underwater/enter1.wav",
@@ -130,6 +256,12 @@
       "id": "minecraft:ambient/underwater/exit3",
       "label": "ambient/underwater/exit3",
       "url": "sounds_flat/ambient/underwater/exit3.wav",
+      "type": "wav"
+    },
+    {
+      "id": "minecraft:ambient/underwater/loop/underwater_ambience",
+      "label": "ambient/underwater/loop/underwater_ambience",
+      "url": "sounds_flat/ambient/underwater/loop/underwater_ambience.wav",
       "type": "wav"
     },
     {
