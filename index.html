@@ -72,8 +72,24 @@
     .btn.play.playing{background:var(--accent);border-color:var(--accent);color:#000}
     .list{display:flex;flex-direction:column;gap:12px;margin-bottom:40px}
     .card{background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-    .title{font-weight:700;margin-bottom:8px;word-break:break-word;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;}
-    .title .distance-label{color:var(--muted);font-weight:500;}
+    .title{
+      font-weight:700;
+      margin-bottom:8px;
+      word-break:break-word;
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .title .name{
+      flex:1;
+      min-width:0;
+    }
+    .title .distance-label{
+      color:var(--muted);
+      font-weight:500;
+      white-space:nowrap;
+    }
     .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
     .label{color:var(--muted)}
     input[type="range"]{width:240px}
@@ -234,14 +250,16 @@ function render(){
       distText = `${rounded} blocks`;
     }
 
+    const hasAudio = item.files && item.files.length;
+
     card.innerHTML = `
       <div class="title">
+        <span class="name">${item.name}</span>
         <span class="distance-label">(distance = ${distText})</span>
-        <span>${item.name}</span>
       </div>
       <div class="row">
-        <button class="btn play">Play</button>
-        <button class="btn stop">Stop</button>
+        <button class="btn play" ${hasAudio ? '' : 'disabled'}>${hasAudio ? 'Play' : 'Play'}</button>
+        <button class="btn stop" ${hasAudio ? '' : 'disabled'}>Stop</button>
       </div>
       <div class="row">
         <span class="label">Pitch:</span>
@@ -284,14 +302,14 @@ document.addEventListener('input', (e)=>{
 
 document.addEventListener('click',(e)=>{
   const playBtn = e.target.closest('.btn.play');
-  if (playBtn){
+  if (playBtn && !playBtn.disabled){
     const card = playBtn.closest('.card');
     const key = card?.dataset?.key;
     if (key) playKey(key, playBtn);
     return;
   }
   const stopBtn = e.target.closest('.btn.stop');
-  if (stopBtn){
+  if (stopBtn && !stopBtn.disabled){
     const card = stopBtn.closest('.card');
     const key = card?.dataset?.key;
     if (key) stopKey(key);
@@ -441,15 +459,17 @@ async function loadDefinitions(){
   for (const [key, def] of Object.entries(defs)){
     if (!def || !Array.isArray(def.sounds)) continue;
 
-    const files = def.sounds
+    // 원본 정의의 모든 base path
+    const bases = def.sounds
       .map(normalizeDefSound)
       .filter(Boolean)
       .map(s => soundToBasePath(s.name))
-      .filter(Boolean)
-      .filter(base => inManifest(baseToUrl(base)));
+      .filter(Boolean);
 
-    if (!files.length) continue;
+    // 실제 manifest에 있는 파일만 플레이 가능
+    const files = bases.filter(base => inManifest(baseToUrl(base)));
 
+    // distance 계산 (플레이 가능 여부와 관계없이 정의 기반으로 계산)
     const distance = computeDistance(def);
 
     const item = { name: key, files, stream: !!def.stream, distance };
