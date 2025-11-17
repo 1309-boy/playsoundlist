@@ -1,0 +1,88 @@
+name: Update Sounds (Auto From Mojang)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */12 * * *"   # 12시간마다 자동 업데이트 (원하면 수정 가능)
+
+jobs:
+  update-sounds:
+    runs-on: ubuntu-latest
+
+    steps:
+    # ----------------------------------------------------
+    # 1. GitHub repo 체크아웃
+    # ----------------------------------------------------
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    # ----------------------------------------------------
+    # 2. Mojang sample pack 다운로드
+    # ----------------------------------------------------
+    - name: Download Mojang Bedrock Samples
+      run: |
+        curl -L -o samples.zip "https://github.com/Mojang/bedrock-samples/archive/refs/heads/main.zip"
+        unzip -o samples.zip -d samples_unzip
+        mv samples_unzip/bedrock-samples-main/resource_pack RP
+
+    # ----------------------------------------------------
+    # 3. FSB 파일 추출
+    # ----------------------------------------------------
+    - name: Extract FSB Files
+      run: |
+        mkdir -p fsb
+        find RP -name "*.fsb" -exec cp {} fsb/ \;
+
+    # ----------------------------------------------------
+    # 4. ffmpeg 설치 (FSB → WAV 변환 용도)
+    # ----------------------------------------------------
+    - name: Install ffmpeg
+      run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+    # ----------------------------------------------------
+    # 5. 모든 FSB → WAV 변환 후 sounds_flat에 넣기
+    # ----------------------------------------------------
+    - name: Convert FSB to WAV
+      run: |
+        mkdir -p sounds_flat
+        for file in fsb/*.fsb; do
+          base=$(basename "$file" .fsb)
+          ffmpeg -v error -y -i "$file" "sounds_flat/${base}.wav" || true
+        done
+
+    # ----------------------------------------------------
+    # 6. sound_definitions.json 복사
+    # ----------------------------------------------------
+    - name: Copy sound_definitions.json
+      run: |
+        cp RP/sounds/sound_definitions.json sound_definitions.json
+
+    # ----------------------------------------------------
+    # 7. manifest.json 자동 생성
+    # ----------------------------------------------------
+    - name: Generate manifest.json
+      run: |
+        echo "[" > manifest.json
+        find sounds_flat -type f -name "*.wav" | sed 's|^|  "|;s|$|"|' | sed '$!s/$/,/' >> manifest.json
+        echo "]" >> manifest.json
+
+    # ----------------------------------------------------
+    # 8. 변경사항 커밋 + Push
+    # ----------------------------------------------------
+    - name: Commit and Push changes
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git add manifest.json sound_definitions.json sounds_flat/
+        git commit -m "Auto-update sounds from Mojang samples" || echo "No changes to commit"
+        git push
+
+    # ----------------------------------------------------
+    # 9. Firebase Hosting 자동 배포
+    # ----------------------------------------------------
+    - name: Deploy to Firebase Hosting
+      uses: FirebaseExtended/action-hosting-deploy@v0
+      with:
+        repoToken: "${{ secrets.GITHUB_TOKEN }}"
+        firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+        channelId: live
