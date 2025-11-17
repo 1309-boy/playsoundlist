@@ -70,6 +70,7 @@
     .btn{padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:#2b2b2b;color:#eee}
     .btn:hover{background:#3a3a3a}
     .btn.play.playing{background:var(--accent);border-color:var(--accent);color:#000}
+    .btn[disabled]{opacity:0.5;cursor:default}
     .list{display:flex;flex-direction:column;gap:12px;margin-bottom:40px}
     .card{background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
     .title{
@@ -241,6 +242,8 @@ function render(){
     card.className = 'card';
     card.dataset.key = item.name;
 
+    const hasAudio = item.files && item.files.length > 0;
+
     // distance label
     let distText;
     if (item.distance == null) {
@@ -250,15 +253,15 @@ function render(){
       distText = `${rounded} blocks`;
     }
 
-    const hasAudio = item.files && item.files.length;
-
     card.innerHTML = `
       <div class="title">
         <span class="name">${item.name}</span>
         <span class="distance-label">(distance = ${distText})</span>
       </div>
       <div class="row">
-        <button class="btn play" ${hasAudio ? '' : 'disabled'}>${hasAudio ? 'Play' : 'Play'}</button>
+        <button class="btn play" data-has-audio="${hasAudio ? '1' : '0'}">
+          ${hasAudio ? 'Play' : '🚫'}
+        </button>
         <button class="btn stop" ${hasAudio ? '' : 'disabled'}>Stop</button>
       </div>
       <div class="row">
@@ -302,12 +305,19 @@ document.addEventListener('input', (e)=>{
 
 document.addEventListener('click',(e)=>{
   const playBtn = e.target.closest('.btn.play');
-  if (playBtn && !playBtn.disabled){
+  if (playBtn){
     const card = playBtn.closest('.card');
     const key = card?.dataset?.key;
+    const hasAudio = playBtn.dataset.hasAudio === '1';
+
+    if (!hasAudio){
+      alert('Audio is not available for this sound (music and some special sounds are not included).');
+      return;
+    }
     if (key) playKey(key, playBtn);
     return;
   }
+
   const stopBtn = e.target.closest('.btn.stop');
   if (stopBtn && !stopBtn.disabled){
     const card = stopBtn.closest('.card');
