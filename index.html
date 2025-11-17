@@ -24,21 +24,21 @@
   <link rel="sitemap" type="application/xml" href="https://playsoundlist.xyz/sitemap.xml">
 
   <!-- Open Graph -->
-<meta property="og:type" content="website">
-<meta property="og:title" content="BE Playsound List - Minecraft Bedrock Edition Sound Library">
-<meta property="og:description" content="A complete searchable sound library for Minecraft Bedrock Edition — listen to all playsound events directly in your browser.">
-<meta property="og:url" content="https://playsoundlist.xyz/">
-<meta property="og:image" content="https://playsoundlist.xyz/assets/og-image.png">
-<meta property="og:image:secure_url" content="https://playsoundlist.xyz/assets/og-image.png">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="BE Playsound List - Minecraft Bedrock Edition Sound Library">
+  <meta property="og:description" content="A complete searchable sound library for Minecraft Bedrock Edition — listen to all playsound events directly in your browser.">
+  <meta property="og:url" content="https://playsoundlist.xyz/">
+  <meta property="og:image" content="https://playsoundlist.xyz/assets/og-image.png">
+  <meta property="og:image:secure_url" content="https://playsoundlist.xyz/assets/og-image.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
 
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="BE Playsound List - Minecraft Bedrock Edition Sound Library">
-<meta name="twitter:description" content="Listen to every Minecraft BE sound event, all in one searchable sound library.">
-<meta name="twitter:image" content="https://playsoundlist.xyz/assets/og-image.png">
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="BE Playsound List - Minecraft Bedrock Edition Sound Library">
+  <meta name="twitter:description" content="Listen to every Minecraft BE sound event, all in one searchable sound library.">
+  <meta name="twitter:image" content="https://playsoundlist.xyz/assets/og-image.png">
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
@@ -72,7 +72,8 @@
     .btn.play.playing{background:var(--accent);border-color:var(--accent);color:#000}
     .list{display:flex;flex-direction:column;gap:12px;margin-bottom:40px}
     .card{background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-    .title{font-weight:700;margin-bottom:8px;word-break:break-word}
+    .title{font-weight:700;margin-bottom:8px;word-break:break-word;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;}
+    .title .distance-label{color:var(--muted);font-weight:500;}
     .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
     .label{color:var(--muted)}
     input[type="range"]{width:240px}
@@ -138,7 +139,12 @@ const $next   = document.getElementById('next');
 const $pagesize = document.getElementById('pagesize');
 
 /* ------------- normalize / mapping -------------- */
-function normalizeDefSound(s){ if(!s) return null; if(typeof s==='string') return {name:s}; if(s.name) return {name:s.name}; return null; }
+function normalizeDefSound(s){
+  if (!s) return null;
+  if (typeof s === 'string') return { name: s };
+  if (s.name) return { name: s.name, ...s };
+  return null;
+}
 function soundToBasePath(s){ return s.replace(/^sounds\//,''); }
 function baseToUrl(base){ return `${GH_BASE}/sounds_flat/${base}.wav`; }
 
@@ -149,6 +155,55 @@ function inManifest(url){
   if (state.manifestSet.has(rel)) return true;
   const onlyPath = url.replace(/^https?:\/\/[^/]+\//,'');
   return state.manifestSet.has(onlyPath);
+}
+
+/* small helper */
+function numOrNull(v){
+  return (typeof v === 'number' && isFinite(v)) ? v : null;
+}
+
+/* ----- distance computation (Bedrock wiki formula) -----
+   For /playsound:
+   max_hearable_range = min(max_distance, max(volume * 16, 16))
+   If max_distance is not given, treat as volume * 16.
+   여기서는 sound_definitions의 volume 기준, playsound volume=1.0 가정.
+*/
+function computeDistance(def){
+  if (!def || !Array.isArray(def.sounds) || !def.sounds.length) return null;
+
+  // 대표로 첫 번째 사운드 사용
+  const s0raw = def.sounds[0];
+  const s0 = typeof s0raw === 'string' ? { name: s0raw } : (s0raw || {});
+
+  // is3D: per-sound > per-def > default true
+  const is3D = (typeof s0.is3D === 'boolean')
+    ? s0.is3D
+    : (typeof def.is3D === 'boolean'
+        ? def.is3D
+        : true);
+
+  // non-3D 사운드는 거리 개념 없음
+  if (!is3D) return null;
+
+  // volume: per-sound > per-def > default 1.0
+  let vol = numOrNull(s0.volume);
+  if (vol === null) vol = numOrNull(def.volume);
+  if (vol === null) vol = 1.0;
+
+  // max_distance: per-sound > per-def > null
+  let maxDist = numOrNull(s0.max_distance);
+  if (maxDist === null) maxDist = numOrNull(def.max_distance);
+
+  // volume 기반 거리
+  const volumeDist = Math.max(vol * 16, 16);
+
+  if (maxDist == null) {
+    // 공식: max_distance 없으면 volume*16 사용 → 결과는 volumeDist
+    return volumeDist;
+  } else {
+    // 둘 중 작은 값
+    return Math.min(maxDist, volumeDist);
+  }
 }
 
 /* ----------------- rendering -------------------- */
@@ -170,8 +225,20 @@ function render(){
     card.className = 'card';
     card.dataset.key = item.name;
 
+    // distance label
+    let distText;
+    if (item.distance == null) {
+      distText = 'N/A';
+    } else {
+      const rounded = Math.round(item.distance * 10) / 10;
+      distText = `${rounded} blocks`;
+    }
+
     card.innerHTML = `
-      <div class="title">${item.name}</div>
+      <div class="title">
+        <span class="distance-label">(distance = ${distText})</span>
+        <span>${item.name}</span>
+      </div>
       <div class="row">
         <button class="btn play">Play</button>
         <button class="btn stop">Stop</button>
@@ -340,7 +407,7 @@ function applyFilter(){
 
 /* ----------------- loading ---------------------- */
 async function loadManifest(){
-  const r = await fetch(MANIFEST_URL, {cache:'no-store'});
+  const r = await fetch(MANIFEST_URL,{cache:'no-store'});
   if (!r.ok) throw new Error(`manifest load failed: HTTP ${r.status}`);
   const j = await r.json();
 
@@ -363,7 +430,7 @@ async function loadManifest(){
 }
 
 async function loadDefinitions(){
-  const r = await fetch(DEFINITIONS_URL, {cache:'no-store'});
+  const r = await fetch(DEFINITIONS_URL,{cache:'no-store'});
   if (!r.ok) throw new Error(`sound_definitions load failed: HTTP ${r.status}`);
   const defsAll = await r.json();
   const defs = defsAll.sound_definitions || defsAll;
@@ -383,7 +450,9 @@ async function loadDefinitions(){
 
     if (!files.length) continue;
 
-    const item = { name: key, files, stream: !!def.stream };
+    const distance = computeDistance(def);
+
+    const item = { name: key, files, stream: !!def.stream, distance };
     items.push(item);
     map.set(key, item);
   }
