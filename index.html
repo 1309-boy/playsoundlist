@@ -17,21 +17,24 @@
   <!-- SEO Meta Tags -->
   <meta name="title" content="BE Playsound List - Minecraft Bedrock Edition Sound Library">
   <meta name="description" content="Explore and listen to every sound event available in Minecraft Bedrock Edition. Search, preview, and learn the exact sound names for use in your projects or commands.">
+  <meta name="keywords" content="Minecraft, Bedrock, BE, playsound, sound list, sound library, game sounds, audio, Minecraft sounds">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://playsoundlist.xyz/">
+  <link rel="sitemap" type="application/xml" href="https://playsoundlist.xyz/sitemap.xml">
 
   <!-- Open Graph -->
+  <meta property="og:type" content="website">
   <meta property="og:title" content="BE Playsound List - Minecraft Bedrock Edition Sound Library">
   <meta property="og:description" content="A complete searchable sound library for Minecraft Bedrock Edition — listen to all playsound events directly in your browser.">
+  <meta property="og:url" content="https://playsoundlist.xyz/">
   <meta property="og:image" content="https://playsoundlist.xyz/assets/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://playsoundlist.xyz/">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="BE Playsound List - Minecraft Bedrock Edition Sound Library">
+  <meta name="twitter:description" content="Listen to every Minecraft BE sound event, all in one searchable sound library.">
   <meta name="twitter:image" content="https://playsoundlist.xyz/assets/og-image.png">
 
   <style>
@@ -39,82 +42,58 @@
     html,body{margin:0;padding:0;background:#111;color:#eee;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
     .wrap{max-width:960px;margin:0 auto;padding:18px;}
     h1{margin:8px 0 18px;text-align:center;color:#90caf9;font-weight:800;letter-spacing:.5px}
-
     .toolbar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
     .search{flex:1 1 440px;max-width:560px}
     .search input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#222;color:var(--fg);outline:none}
-
     .pagesize select{padding:9px 10px;border-radius:10px;background:#222;border:1px solid var(--line);color:var(--fg)}
-
     .pager{display:flex;gap:8px;align-items:center;justify-content:center;margin:8px 0 14px}
     .muted{color:var(--muted);font-size:.92rem}
-
-    .list{display:flex;flex-direction:column;gap:12px;margin-bottom:40px}
-
-    .card{background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px;position:relative}
-    .title{font-weight:700;margin-bottom:8px;word-break:break-word}
-
-    .distanceTag{
-      position:absolute;
-      right:12px;
-      top:12px;
-      color:#8bc34a;
-      font-size:0.85rem;
-      font-weight:700;
-    }
-
-    .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
-    .label{color:var(--muted)}
-    input[type="range"]{width:240px}
-
     button{cursor:pointer}
     .btn{padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:#2b2b2b;color:#eee}
     .btn:hover{background:#3a3a3a}
     .btn.play.playing{background:var(--accent);border-color:var(--accent);color:#000}
-
-    .btn.disabled{
-      background:#552222;
-      border-color:#772222;
-      color:#ffaaaa;
-      cursor:not-allowed;
-    }
+    .btn.disabled{background:#444!important;border-color:#333!important;color:#999!important;cursor:not-allowed!important;}
+    .list{display:flex;flex-direction:column;gap:12px;margin-bottom:40px}
+    .card{background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+    .title{font-weight:700;margin-bottom:8px;word-break:break-word;display:flex;justify-content:space-between;align-items:center}
+    .dist-label{font-size:0.9rem;color:#ccc;margin-left:10px}
+    .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
+    .label{color:var(--muted)}
+    input[type="range"]{width:240px}
   </style>
 </head>
 
 <body>
-<div class="wrap">
-  <h1>BE Playsound List</h1>
+  <div class="wrap">
+    <h1>BE Playsound List</h1>
 
-  <div class="toolbar">
-    <div class="search"><input id="q" type="text" placeholder="Search sounds (ex: beacon.pow, ui.loom ...)" /></div>
-    <div class="pagesize">
-      <select id="pagesize">
-        <option>25</option><option>50</option><option selected>100</option><option>200</option>
-      </select>
+    <div class="toolbar">
+      <div class="search"><input id="q" type="text" placeholder="Search sounds (e.g., beacon.pow, ui.loom ...)" /></div>
+      <div class="pagesize">
+        <select id="pagesize">
+          <option>25</option><option>50</option><option selected>100</option><option>200</option>
+        </select>
+      </div>
     </div>
+
+    <div class="pager">
+      <button id="prev" class="btn">&lt; Prev</button>
+      <div id="pageinfo" class="muted"></div>
+      <button id="next" class="btn">Next &gt;</button>
+    </div>
+
+    <div id="count" class="muted" style="text-align:center;margin-bottom:10px;"></div>
+    <div id="list" class="list"></div>
   </div>
 
-  <div class="pager">
-    <button id="prev" class="btn">&lt; Prev</button>
-    <div id="pageinfo" class="muted"></div>
-    <button id="next" class="btn">Next &gt;</button>
-  </div>
-
-  <div id="count" class="muted" style="text-align:center;margin-bottom:10px;"></div>
-  <div id="list" class="list"></div>
-</div>
 
 <script>
-  /* ===============================
-   Configuration
-================================*/
+/* ================= CONFIG ================== */
 const GH_BASE = 'https://1309-boy.github.io/playsoundlist';
 const MANIFEST_URL    = `${GH_BASE}/manifest.json`;
 const DEFINITIONS_URL = `${GH_BASE}/sound_definitions.json`;
 
-/* ===============================
-   Global State
-================================*/
+/* ================= STATE ================== */
 const state = {
   items: [],
   filtered: [],
@@ -124,17 +103,16 @@ const state = {
   pageSize: 100,
 };
 
-const playIndex = {}; 
-let currentKey = null;
+const playIndex = {};
+let currentKey   = null;
 let currentPlayBtn = null;
 
-/* Audio */
 let webCtx = null;
 let audioUnlocked = false;
 let currentSrcNode = null;
 const bufferCache = new Map();
 
-/* DOM */
+/* ================= DOM ================== */
 const $list   = document.getElementById('list');
 const $count  = document.getElementById('count');
 const $q      = document.getElementById('q');
@@ -143,12 +121,10 @@ const $prev   = document.getElementById('prev');
 const $next   = document.getElementById('next');
 const $pagesize = document.getElementById('pagesize');
 
-/* ===============================
-   Helper Functions
-================================*/
+/* ================= HELPERS ================== */
 function normalizeDefSound(s){
   if(!s) return null;
-  if(typeof s === 'string') return {name:s};
+  if(typeof s==='string') return {name:s};
   if(s.name) return {name:s.name};
   return null;
 }
@@ -157,69 +133,47 @@ function soundToBasePath(s){ return s.replace(/^sounds\//,''); }
 function baseToUrl(base){ return `${GH_BASE}/sounds_flat/${base}.wav`; }
 
 function inManifest(url){
-  if(state.manifestSet.has(url)) return true;
-
+  if (state.manifestSet.has(url)) return true;
   const rel = url.replace(`${GH_BASE}/`,'');
-  if(state.manifestSet.has(rel)) return true;
-
+  if (state.manifestSet.has(rel)) return true;
   const onlyPath = url.replace(/^https?:\/\/[^/]+\//,'');
   return state.manifestSet.has(onlyPath);
 }
 
-/* ===============================
-   Distance Calculation
-================================*/
-function calcDistance(def){
-  const maxD = def.max_distance;
-  let vol = 1.0;
-
-  if(def.sounds && def.sounds.length && def.sounds[0].volume){
-    vol = def.sounds[0].volume;
-  }
-
-  if(maxD && maxD > 0){
-    return Math.max( vol * 16, 16 );
-  }
-  return Math.max( vol * 16, 16 );
-}
-
-/* ===============================
-   Rendering UI
-================================*/
+/* ================= RENDER ================== */
 function fmtPage(){
   const total = state.filtered.length;
   const pages = Math.max(1, Math.ceil(total / state.pageSize));
   const page  = Math.min(state.page + 1, pages);
-  $pageinfo.textContent = `Page ${page} / ${pages}`;
+  $pageinfo.textContent = `Page ${page} of ${pages}`;
 }
 
 function render(){
   $list.innerHTML = '';
-
   const start = state.page * state.pageSize;
   const end   = Math.min(start + state.pageSize, state.filtered.length);
-  const items = state.filtered.slice(start, end);
 
-  for(const item of items){
+  for (const item of state.filtered.slice(start, end)){
+    const distHTML =
+      (typeof item.max_distance === "number")
+        ? `<span class="dist-label">(distance = ${item.max_distance})</span>`
+        : ``;
+
     const card = document.createElement('div');
     card.className = 'card';
     card.dataset.key = item.name;
 
-    const distLabel = (item.distance === null)
-      ? `distance: n/a`
-      : `distance: ${item.distance}`;
-
-    const hasAudio = item.files.length > 0;
+    const missingAudio = item.files_missing ? true : false;
 
     card.innerHTML = `
-      <div class="distanceTag">${distLabel}</div>
-      <div class="title">${item.name}</div>
+      <div class="title">
+        <span>${item.name}</span>
+        ${distHTML}
+      </div>
 
       <div class="row">
-        <button class="btn play ${hasAudio ? '' : 'disabled'}">${
-          hasAudio ? 'Play' : '🚫'
-        }</button>
-        <button class="btn stop ${hasAudio ? '' : 'disabled'}">Stop</button>
+        <button class="btn play ${missingAudio ? "disabled" : ""}">${missingAudio ? "🚫" : "Play"}</button>
+        <button class="btn stop">Stop</button>
       </div>
 
       <div class="row">
@@ -232,13 +186,11 @@ function render(){
     $list.appendChild(card);
   }
 
-  $count.textContent = `Showing ${start+1}-${end} of ${state.filtered.length}`;
+  $count.textContent = `Showing ${start+1}-${end} of ${state.filtered.length} sounds`;
   fmtPage();
 }
 
-/* ===============================
-   Events
-================================*/
+/* ================= EVENTS ================== */
 $q.addEventListener('input', applyFilter);
 
 $pagesize.addEventListener('change', ()=>{
@@ -247,80 +199,66 @@ $pagesize.addEventListener('change', ()=>{
   render();
 });
 
-$prev.addEventListener('click', ()=>{
-  if(state.page > 0){
-    state.page--;
-    render();
-  }
-});
-
+$prev.addEventListener('click', ()=>{ if (state.page>0){ state.page--; render(); }});
 $next.addEventListener('click', ()=>{
   const pages = Math.ceil(state.filtered.length / state.pageSize);
-  if(state.page < pages-1){
-    state.page++;
-    render();
-  }
+  if (state.page < pages-1){ state.page++; render(); }
 });
 
-document.addEventListener('input', (e)=>{
-  if(!e.target.matches('.pitch')) return;
+document.addEventListener('input',(e)=>{
+  if (!e.target.matches('.pitch')) return;
   const card = e.target.closest('.card');
-  const key  = card?.dataset?.key;
+  const key  = card.dataset.key;
   card.querySelector('.pitch-val').textContent = e.target.value;
 
-  if(currentSrcNode && currentKey === key){
-    currentSrcNode.playbackRate.value = parseFloat(e.target.value);
+  if (currentSrcNode && currentKey === key){
+    currentSrcNode.playbackRate.value = parseFloat(e.target.value || '1.0');
   }
 });
 
-document.addEventListener('click', (e)=>{
-  const btnPlay = e.target.closest('.btn.play');
-  if(btnPlay){
-    const card = btnPlay.closest('.card');
-    const key = card.dataset.key;
-    if(btnPlay.classList.contains('disabled')){
-      alert("This sound file is not available.\n(음원이 제공되지 않습니다.)");
+document.addEventListener('click',(e)=>{
+  const playBtn = e.target.closest('.btn.play');
+  if (playBtn){
+    if (playBtn.classList.contains('disabled')){
+      alert("Audio file not provided for this sound.");
       return;
     }
-    playKey(key, btnPlay);
+    const card = playBtn.closest('.card');
+    playKey(card.dataset.key, playBtn);
     return;
   }
 
-  const btnStop = e.target.closest('.btn.stop');
-  if(btnStop){
-    const card = btnStop.closest('.card');
-    const key = card.dataset.key;
-    stopKey(key);
+  const stopBtn = e.target.closest('.btn.stop');
+  if (stopBtn){
+    const card = stopBtn.closest('.card');
+    stopKey(card.dataset.key);
   }
 });
 
-/* ===============================
-   Unlock Audio
-================================*/
+/* ================= AUDIO UNLOCK ================== */
 ['pointerdown','touchstart','keydown','mousedown'].forEach(evt=>{
-  window.addEventListener(evt, unlockAudio, {once:true, passive:true});
+  window.addEventListener(evt, unlockAudio, { once:true, passive:true });
 });
 
 async function unlockAudio(){
   try{
     const AC = window.AudioContext || window.webkitAudioContext;
-    if(AC && !webCtx){
-      webCtx = new AC();
-    }
-    if(webCtx && webCtx.state === 'suspended'){
-      await webCtx.resume();
-    }
+    if (AC && !webCtx) webCtx = new AC();
+    if (webCtx?.state === 'suspended') await webCtx.resume();
+
+    const buf = webCtx.createBuffer(1,1,22050);
+    const src = webCtx.createBufferSource();
+    src.buffer = buf; src.connect(webCtx.destination); src.start(0);
+
     audioUnlocked = true;
-  }catch(err){}
+  }catch(_){}
 }
 
-/* ===============================
-   WebAudio helpers
-================================*/
+/* ================= WEB AUDIO ================== */
 async function getBuffer(url){
-  if(bufferCache.has(url)) return bufferCache.get(url);
+  if (bufferCache.has(url)) return bufferCache.get(url);
   const r = await fetch(url, {cache:'force-cache'});
-  if(!r.ok) throw new Error("Audio fetch failed");
+  if (!r.ok) throw new Error('fetch fail');
   const ab = await r.arrayBuffer();
   const buf = await webCtx.decodeAudioData(ab);
   bufferCache.set(url, buf);
@@ -328,45 +266,41 @@ async function getBuffer(url){
 }
 
 function stopCurrent(){
-  if(currentSrcNode){
-    try{ currentSrcNode.stop(0); }catch(_){}
+  if (currentSrcNode){
+    currentSrcNode.stop(0);
     currentSrcNode.disconnect?.();
   }
-  if(currentPlayBtn){
-    currentPlayBtn.classList.remove('playing');
-  }
+  if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
   currentSrcNode = null;
-  currentPlayBtn = null;
   currentKey = null;
+  currentPlayBtn = null;
 }
 
-/* ===============================
-   Play / Stop Logic
-================================*/
-function nextUrlFor(key){
-  const item = state.itemsByName.get(key);
-  if(!item || !item.files.length) return null;
-
-  const idx = ((playIndex[key] || 0) % item.files.length);
-  playIndex[key] = idx + 1;
-
+/* ================= PLAY ================== */
+function nextUrlFor(item){
+  const idx = ((playIndex[item.name]||0) % item.files.length);
+  playIndex[item.name] = idx + 1;
   return baseToUrl(item.files[idx]);
 }
 
 async function playKey(key, btn){
-  const url = nextUrlFor(key);
-  if(!url){
-    alert("This sound file is not available.");
+  const item = state.itemsByName.get(key);
+  if (!item) return;
+
+  if (item.files_missing){
+    alert("Audio file not provided for this sound.");
     return;
   }
 
+  const url = nextUrlFor(item);
+  if (!url || !inManifest(url)) return;
+
   await unlockAudio();
-  if(!webCtx) await unlockAudio();
 
   stopCurrent();
 
   const card = document.querySelector(`.card[data-key="${CSS.escape(key)}"]`);
-  const rate = parseFloat(card.querySelector('.pitch').value || "1.0");
+  const rate = parseFloat(card.querySelector('.pitch').value || '1.0');
 
   try{
     const buf = await getBuffer(url);
@@ -378,8 +312,8 @@ async function playKey(key, btn){
     currentSrcNode = src;
     currentKey = key;
     currentPlayBtn = btn;
-
     btn.classList.add('playing');
+
     src.onended = ()=> stopCurrent();
     src.start(0);
   }catch(err){
@@ -388,84 +322,72 @@ async function playKey(key, btn){
 }
 
 function stopKey(key){
-  if(currentSrcNode && currentKey === key){
+  if (currentKey === key){
     stopCurrent();
   }
 }
 
-/* ===============================
-   Filtering
-================================*/
+/* ================= FILTER ================== */
 function applyFilter(){
-  const q = ($q.value || "").toLowerCase().trim();
+  const q = ($q.value || '').toLowerCase().trim();
   state.filtered = !q ? state.items.slice()
                       : state.items.filter(it => it.name.toLowerCase().includes(q));
   state.page = 0;
   render();
 }
 
-/* ===============================
-   Load manifest + definitions
-================================*/
+/* ================= LOAD ================== */
 async function loadManifest(){
-  const r = await fetch(MANIFEST_URL, {cache:"no-store"});
+  const r = await fetch(MANIFEST_URL,{cache:'no-store'});
   const j = await r.json();
-
-  let urls = [];
-  if(Array.isArray(j)) urls = j;
-  else if(j.urls) urls = j.urls;
-  else if(j.entries) urls = j.entries.map(e=>e.url);
-
-  const s = new Set();
-  for(const u of urls){
-    if(!u) continue;
-    s.add(u);
-    const rel = u.replace(`${GH_BASE}/`, '');
-    s.add(rel);
-    const onlyPath = u.replace(/^https?:\/\/[^/]+\//,'');
-    s.add(onlyPath);
-  }
-  state.manifestSet = s;
+  const urls = Array.isArray(j)
+    ? j
+    : j.entries?.map(e=>e.url) || j.urls || j.files || [];
+  state.manifestSet = new Set(urls);
 }
 
 async function loadDefinitions(){
-  const r = await fetch(DEFINITIONS_URL, {cache:"no-store"});
-  const defsAll = await r.json();
-  const defs = defsAll.sound_definitions || defsAll;
+  const r = await fetch(DEFINITIONS_URL,{cache:'no-store'});
+  const defs = (await r.json()).sound_definitions;
 
-  let items = [];
-  let map = new Map();
+  const items = [];
+  const map = new Map();
 
-  for(const [key, def] of Object.entries(defs)){
-    if(!def || !Array.isArray(def.sounds)) continue;
+  for (const [name, def] of Object.entries(defs)){
+    if (!Array.isArray(def.sounds)) continue;
 
     const files = def.sounds
       .map(normalizeDefSound)
       .filter(Boolean)
-      .map(s => soundToBasePath(s.name))
-      .filter(base => inManifest(baseToUrl(base)));
+      .map(s=>soundToBasePath(s.name))
+      .filter(Boolean)
+      .filter(base=>inManifest(baseToUrl(base)));
 
-    const distance = calcDistance(def);
+    const missing = files.length === 0;
+
+    const maxDist =
+      typeof def.max_distance === "number"
+        ? def.max_distance
+        : null;
 
     const item = {
-      name: key,
+      name,
       files,
-      distance
+      files_missing: missing,
+      max_distance: maxDist
     };
+
     items.push(item);
-    map.set(key, item);
+    map.set(name, item);
   }
 
-  items.sort((a,b) => a.name.localeCompare(b.name));
-
+  items.sort((a,b)=>a.name.localeCompare(b.name));
   state.items = items;
   state.itemsByName = map;
   state.filtered = items.slice();
 }
 
-/* ===============================
-   Init
-================================*/
+/* ================= INIT ================== */
 (async function init(){
   await loadManifest();
   await loadDefinitions();
