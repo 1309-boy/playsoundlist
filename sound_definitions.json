@@ -1871,6 +1871,86 @@
          ],
          "subtitle" : "subtitles.block.chorus_flower.grow"
       },
+      "block.cinnabar.break" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/cinnabar/break1",
+            "sounds/block/cinnabar/break2",
+            "sounds/block/cinnabar/break3",
+            "sounds/block/cinnabar/break4",
+            "sounds/block/cinnabar/break5",
+            "sounds/block/cinnabar/break6",
+            "sounds/block/cinnabar/break7"
+         ],
+         "subtitle" : "subtitles.block.generic.break"
+      },
+      "block.cinnabar.fall" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/cinnabar/hit1",
+            "sounds/block/cinnabar/hit2",
+            "sounds/block/cinnabar/hit3",
+            "sounds/block/cinnabar/hit4",
+            "sounds/block/cinnabar/hit5",
+            "sounds/block/cinnabar/hit6",
+            "sounds/block/cinnabar/hit7"
+         ],
+         "subtitle" : "subtitles.block.generic.fall"
+      },
+      "block.cinnabar.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/cinnabar/hit1",
+            "sounds/block/cinnabar/hit2",
+            "sounds/block/cinnabar/hit3",
+            "sounds/block/cinnabar/hit4",
+            "sounds/block/cinnabar/hit5",
+            "sounds/block/cinnabar/hit6",
+            "sounds/block/cinnabar/hit7"
+         ],
+         "subtitle" : "subtitles.block.generic.hit"
+      },
+      "block.cinnabar.place" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/cinnabar/place1",
+            "sounds/block/cinnabar/place2",
+            "sounds/block/cinnabar/place3",
+            "sounds/block/cinnabar/place4",
+            "sounds/block/cinnabar/place5",
+            "sounds/block/cinnabar/place6",
+            "sounds/block/cinnabar/place7"
+         ],
+         "subtitle" : "subtitles.block.generic.place"
+      },
+      "block.cinnabar.step" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/cinnabar/step1",
+            "sounds/block/cinnabar/step2",
+            "sounds/block/cinnabar/step3",
+            "sounds/block/cinnabar/step4",
+            "sounds/block/cinnabar/step5",
+            "sounds/block/cinnabar/step6",
+            "sounds/block/cinnabar/step7"
+         ],
+         "subtitle" : "subtitles.block.generic.footsteps"
+      },
       "block.click" : {
          "category" : "block",
          "max_distance" : null,
@@ -2086,6 +2166,19 @@
          ],
          "subtitle" : "subtitles.block.generic.break"
       },
+      "block.copper_golem_statue.fall" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : 16.0,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/copper_golem_statue/hit1",
+            "sounds/block/copper_golem_statue/hit2",
+            "sounds/block/copper_golem_statue/hit3",
+            "sounds/block/copper_golem_statue/hit4"
+         ],
+         "subtitle" : "subtitles.block.generic.fall"
+      },
       "block.copper_golem_statue.hit" : {
          "category" : "block",
          "max_distance" : 16.0,
@@ -2109,6 +2202,19 @@
             "sounds/block/copper_golem_statue/place4"
          ],
          "subtitle" : "subtitles.block.generic.place"
+      },
+      "block.copper_golem_statue.step" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : 16.0,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/copper_golem_statue/hit1",
+            "sounds/block/copper_golem_statue/hit2",
+            "sounds/block/copper_golem_statue/hit3",
+            "sounds/block/copper_golem_statue/hit4"
+         ],
+         "subtitle" : "subtitles.block.generic.footsteps"
       },
       "block.creaking_heart.ambient" : {
          "__use_legacy_max_distance" : "true",
@@ -2499,6 +2605,7 @@
          "subtitle" : "subtitles.block.dry_grass.ambient"
       },
       "block.enchanting_table.use" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "block",
          "max_distance" : null,
          "min_distance" : null,
@@ -2516,7 +2623,7 @@
                "volume" : 1
             }
          ],
-         "subtitle" : "subtitles.block.enchantment_table.use"
+         "subtitle" : "subtitles.block.enchanting_table.use"
       },
       "block.end_portal.spawn" : {
          "__use_legacy_max_distance" : "true",
@@ -3421,6 +3528,173 @@
          ],
          "subtitle" : "subtitles.ambient.sound"
       },
+      "block.potent_sulfur.ambient" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "ambient",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/ambient1",
+            "sounds/block/potent_sulfur/ambient2",
+            "sounds/block/potent_sulfur/ambient3",
+            "sounds/block/potent_sulfur/ambient4",
+            "sounds/block/potent_sulfur/ambient5",
+            "sounds/block/potent_sulfur/ambient6",
+            "sounds/block/potent_sulfur/ambient7",
+            "sounds/block/potent_sulfur/ambient8",
+            "sounds/block/potent_sulfur/ambient9",
+            "sounds/block/potent_sulfur/ambient10",
+            "sounds/block/potent_sulfur/ambient11",
+            "sounds/block/potent_sulfur/ambient12",
+            "sounds/block/potent_sulfur/ambient13",
+            "sounds/block/potent_sulfur/ambient14"
+         ],
+         "subtitle" : "subtitles.block.potent_sulfur.noxious_gas"
+      },
+      "block.potent_sulfur.break" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/break1",
+            "sounds/block/potent_sulfur/break2",
+            "sounds/block/potent_sulfur/break3",
+            "sounds/block/potent_sulfur/break4",
+            "sounds/block/potent_sulfur/break5",
+            "sounds/block/potent_sulfur/break6",
+            "sounds/block/potent_sulfur/break7"
+         ],
+         "subtitle" : "subtitles.block.generic.break"
+      },
+      "block.potent_sulfur.fall" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/hit1",
+            "sounds/block/potent_sulfur/hit2",
+            "sounds/block/potent_sulfur/hit3",
+            "sounds/block/potent_sulfur/hit4",
+            "sounds/block/potent_sulfur/hit5",
+            "sounds/block/potent_sulfur/hit6",
+            "sounds/block/potent_sulfur/hit7"
+         ],
+         "subtitle" : "subtitles.block.generic.fall"
+      },
+      "block.potent_sulfur.geyser_continuous_eruption_active" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : 32.0,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/continuous/eruption_active1",
+            "sounds/block/potent_sulfur/continuous/eruption_active2",
+            "sounds/block/potent_sulfur/continuous/eruption_active3",
+            "sounds/block/potent_sulfur/continuous/eruption_active4",
+            "sounds/block/potent_sulfur/continuous/eruption_active5",
+            "sounds/block/potent_sulfur/continuous/eruption_active6",
+            "sounds/block/potent_sulfur/continuous/eruption_active7"
+         ]
+      },
+      "block.potent_sulfur.geyser_continuous_eruption_start" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : 16.0,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/continuous/eruption1",
+            "sounds/block/potent_sulfur/continuous/eruption2",
+            "sounds/block/potent_sulfur/continuous/eruption3",
+            "sounds/block/potent_sulfur/continuous/eruption4",
+            "sounds/block/potent_sulfur/continuous/eruption5",
+            "sounds/block/potent_sulfur/continuous/eruption6"
+         ],
+         "subtitle" : "subtitles.block.potent_sulfur.geyser_eruption_start"
+      },
+      "block.potent_sulfur.geyser_eruption_active" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : 32.0,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/eruption_active1",
+            "sounds/block/potent_sulfur/eruption_active2",
+            "sounds/block/potent_sulfur/eruption_active3",
+            "sounds/block/potent_sulfur/eruption_active4",
+            "sounds/block/potent_sulfur/eruption_active5",
+            "sounds/block/potent_sulfur/eruption_active6",
+            "sounds/block/potent_sulfur/eruption_active7",
+            "sounds/block/potent_sulfur/eruption_active8"
+         ]
+      },
+      "block.potent_sulfur.geyser_eruption_start" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : 16.0,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/eruption1",
+            "sounds/block/potent_sulfur/eruption2",
+            "sounds/block/potent_sulfur/eruption3",
+            "sounds/block/potent_sulfur/eruption4",
+            "sounds/block/potent_sulfur/eruption5",
+            "sounds/block/potent_sulfur/eruption6",
+            "sounds/block/potent_sulfur/eruption7",
+            "sounds/block/potent_sulfur/eruption8"
+         ],
+         "subtitle" : "subtitles.block.potent_sulfur.geyser_eruption_start"
+      },
+      "block.potent_sulfur.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/hit1",
+            "sounds/block/potent_sulfur/hit2",
+            "sounds/block/potent_sulfur/hit3",
+            "sounds/block/potent_sulfur/hit4",
+            "sounds/block/potent_sulfur/hit5",
+            "sounds/block/potent_sulfur/hit6",
+            "sounds/block/potent_sulfur/hit7"
+         ],
+         "subtitle" : "subtitles.block.generic.hit"
+      },
+      "block.potent_sulfur.place" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/place1",
+            "sounds/block/potent_sulfur/place2",
+            "sounds/block/potent_sulfur/place3",
+            "sounds/block/potent_sulfur/place4",
+            "sounds/block/potent_sulfur/place5",
+            "sounds/block/potent_sulfur/place6",
+            "sounds/block/potent_sulfur/place7",
+            "sounds/block/potent_sulfur/place8"
+         ],
+         "subtitle" : "subtitles.block.generic.place"
+      },
+      "block.potent_sulfur.step" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/potent_sulfur/step1",
+            "sounds/block/potent_sulfur/step2",
+            "sounds/block/potent_sulfur/step3",
+            "sounds/block/potent_sulfur/step4",
+            "sounds/block/potent_sulfur/step5",
+            "sounds/block/potent_sulfur/step6",
+            "sounds/block/potent_sulfur/step7"
+         ],
+         "subtitle" : "subtitles.block.generic.footsteps"
+      },
       "block.resin.break" : {
          "__use_legacy_max_distance" : "true",
          "category" : "block",
@@ -3983,6 +4257,86 @@
                "volume" : 1
             }
          ]
+      },
+      "block.sulfur.break" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : 16.0,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/sulfur/break1",
+            "sounds/block/sulfur/break2",
+            "sounds/block/sulfur/break3",
+            "sounds/block/sulfur/break4",
+            "sounds/block/sulfur/break5",
+            "sounds/block/sulfur/break6",
+            "sounds/block/sulfur/break7"
+         ],
+         "subtitle" : "subtitles.block.generic.break"
+      },
+      "block.sulfur.fall" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/sulfur/hit1",
+            "sounds/block/sulfur/hit2",
+            "sounds/block/sulfur/hit3",
+            "sounds/block/sulfur/hit4",
+            "sounds/block/sulfur/hit5",
+            "sounds/block/sulfur/hit6",
+            "sounds/block/sulfur/hit7"
+         ],
+         "subtitle" : "subtitles.block.generic.fall"
+      },
+      "block.sulfur.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : 16.0,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/sulfur/hit1",
+            "sounds/block/sulfur/hit2",
+            "sounds/block/sulfur/hit3",
+            "sounds/block/sulfur/hit4",
+            "sounds/block/sulfur/hit5",
+            "sounds/block/sulfur/hit6",
+            "sounds/block/sulfur/hit7"
+         ],
+         "subtitle" : "subtitles.block.generic.hit"
+      },
+      "block.sulfur.place" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "block",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/sulfur/place1",
+            "sounds/block/sulfur/place2",
+            "sounds/block/sulfur/place3",
+            "sounds/block/sulfur/place4",
+            "sounds/block/sulfur/place5",
+            "sounds/block/sulfur/place6",
+            "sounds/block/sulfur/place7"
+         ],
+         "subtitle" : "subtitles.block.generic.place"
+      },
+      "block.sulfur.step" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/block/sulfur/step1",
+            "sounds/block/sulfur/step2",
+            "sounds/block/sulfur/step3",
+            "sounds/block/sulfur/step4",
+            "sounds/block/sulfur/step5",
+            "sounds/block/sulfur/step6",
+            "sounds/block/sulfur/step7"
+         ],
+         "subtitle" : "subtitles.block.generic.footsteps"
       },
       "block.sweet_berry_bush.break" : {
          "__use_legacy_max_distance" : "true",
@@ -9718,6 +10072,30 @@
          "min_distance" : null,
          "sounds" : [ "sounds/item/spyglass/use" ],
          "subtitle" : "subtitles.item.spyglass.use"
+      },
+      "item.sulfur_cube.empty" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/emptysulfurcube1",
+            "sounds/mob/sulfur_cube/emptysulfurcube2",
+            "sounds/mob/sulfur_cube/emptysulfurcube3"
+         ],
+         "subtitle" : "subtitles.item.bucket.empty"
+      },
+      "item.sulfur_cube.fill" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/fillsulfurcube1",
+            "sounds/mob/sulfur_cube/fillsulfurcube2",
+            "sounds/mob/sulfur_cube/fillsulfurcube3"
+         ],
+         "subtitle" : "subtitles.item.bucket.fill_sulfur_cube"
       },
       "item.trident.hit" : {
          "__use_legacy_max_distance" : "true",
@@ -19752,6 +20130,470 @@
          ],
          "subtitle" : "subtitles.block.generic.footsteps"
       },
+      "mob.sulfur_cube.absorb" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [ "sounds/mob/sulfur_cube/absorb1", "sounds/mob/sulfur_cube/absorb2" ],
+         "subtitle" : "subtitles.entity.sulfur_cube.absorb"
+      },
+      "mob.sulfur_cube.bounce" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/ball/bounce1",
+            "sounds/mob/sulfur_cube/ball/bounce2",
+            "sounds/mob/sulfur_cube/ball/bounce3",
+            "sounds/mob/sulfur_cube/ball/bounce4",
+            "sounds/mob/sulfur_cube/ball/bounce5",
+            "sounds/mob/sulfur_cube/ball/bounce6",
+            "sounds/mob/sulfur_cube/ball/bounce7",
+            "sounds/mob/sulfur_cube/ball/bounce8"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.bounce"
+      },
+      "mob.sulfur_cube.bouncy.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/bouncy_hit1",
+            "sounds/mob/sulfur_cube/bouncy_hit2",
+            "sounds/mob/sulfur_cube/bouncy_hit3",
+            "sounds/mob/sulfur_cube/bouncy_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.bouncy.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/bouncy_push1",
+            "sounds/mob/sulfur_cube/bouncy_push2",
+            "sounds/mob/sulfur_cube/bouncy_push3",
+            "sounds/mob/sulfur_cube/bouncy_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.death" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [ "sounds/mob/sulfur_cube/death" ],
+         "subtitle" : "subtitles.entity.sulfur_cube.death"
+      },
+      "mob.sulfur_cube.eject" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [ "sounds/mob/sulfur_cube/eject1", "sounds/mob/sulfur_cube/eject2" ],
+         "subtitle" : "subtitles.entity.sulfur_cube.eject"
+      },
+      "mob.sulfur_cube.explosive.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/explosive_hit1",
+            "sounds/mob/sulfur_cube/explosive_hit2",
+            "sounds/mob/sulfur_cube/explosive_hit3",
+            "sounds/mob/sulfur_cube/explosive_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.explosive.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/explosive_push1",
+            "sounds/mob/sulfur_cube/explosive_push2",
+            "sounds/mob/sulfur_cube/explosive_push3",
+            "sounds/mob/sulfur_cube/explosive_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.fast_flat.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/fastflat_hit1",
+            "sounds/mob/sulfur_cube/fastflat_hit2",
+            "sounds/mob/sulfur_cube/fastflat_hit3",
+            "sounds/mob/sulfur_cube/fastflat_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.fast_flat.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/fastflat_push1",
+            "sounds/mob/sulfur_cube/fastflat_push2",
+            "sounds/mob/sulfur_cube/fastflat_push3",
+            "sounds/mob/sulfur_cube/fastflat_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.fast_sliding.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/fastsliding_hit1",
+            "sounds/mob/sulfur_cube/fastsliding_hit2",
+            "sounds/mob/sulfur_cube/fastsliding_hit3",
+            "sounds/mob/sulfur_cube/fastsliding_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.fast_sliding.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/fastsliding_push1",
+            "sounds/mob/sulfur_cube/fastsliding_push2",
+            "sounds/mob/sulfur_cube/fastsliding_push3",
+            "sounds/mob/sulfur_cube/fastsliding_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.high_resistance.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/highresistance_hit1",
+            "sounds/mob/sulfur_cube/highresistance_hit2",
+            "sounds/mob/sulfur_cube/highresistance_hit3",
+            "sounds/mob/sulfur_cube/highresistance_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.high_resistance.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/highresistance_push1",
+            "sounds/mob/sulfur_cube/highresistance_push2",
+            "sounds/mob/sulfur_cube/highresistance_push3",
+            "sounds/mob/sulfur_cube/highresistance_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.hot.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/hot_hit1",
+            "sounds/mob/sulfur_cube/hot_hit2",
+            "sounds/mob/sulfur_cube/hot_hit3",
+            "sounds/mob/sulfur_cube/hot_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.hot.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/hot_push1",
+            "sounds/mob/sulfur_cube/hot_push2",
+            "sounds/mob/sulfur_cube/hot_push3",
+            "sounds/mob/sulfur_cube/hot_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.hurt" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/hit1",
+            "sounds/mob/sulfur_cube/hit2",
+            "sounds/mob/sulfur_cube/hit3",
+            "sounds/mob/sulfur_cube/hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hurt"
+      },
+      "mob.sulfur_cube.jump" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/jump1",
+            "sounds/mob/sulfur_cube/jump2",
+            "sounds/mob/sulfur_cube/jump3",
+            "sounds/mob/sulfur_cube/jump4",
+            "sounds/mob/sulfur_cube/jump5",
+            "sounds/mob/sulfur_cube/jump6",
+            "sounds/mob/sulfur_cube/jump7",
+            "sounds/mob/sulfur_cube/jump8",
+            "sounds/mob/sulfur_cube/jump9",
+            "sounds/mob/sulfur_cube/jump10",
+            "sounds/mob/sulfur_cube/jump11"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.squish"
+      },
+      "mob.sulfur_cube.landing" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/squish1",
+            "sounds/mob/sulfur_cube/squish2",
+            "sounds/mob/sulfur_cube/squish3",
+            "sounds/mob/sulfur_cube/squish4",
+            "sounds/mob/sulfur_cube/squish5",
+            "sounds/mob/sulfur_cube/squish6",
+            "sounds/mob/sulfur_cube/squish7",
+            "sounds/mob/sulfur_cube/squish8",
+            "sounds/mob/sulfur_cube/squish9",
+            "sounds/mob/sulfur_cube/squish10",
+            "sounds/mob/sulfur_cube/squish11"
+         ]
+      },
+      "mob.sulfur_cube.light.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/light_hit1",
+            "sounds/mob/sulfur_cube/light_hit2",
+            "sounds/mob/sulfur_cube/light_hit3",
+            "sounds/mob/sulfur_cube/light_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.light.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/light_push1",
+            "sounds/mob/sulfur_cube/light_push2",
+            "sounds/mob/sulfur_cube/light_push3",
+            "sounds/mob/sulfur_cube/light_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.regular.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/regular_hit1",
+            "sounds/mob/sulfur_cube/regular_hit2",
+            "sounds/mob/sulfur_cube/regular_hit3",
+            "sounds/mob/sulfur_cube/regular_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.regular.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/regular_push1",
+            "sounds/mob/sulfur_cube/regular_push2",
+            "sounds/mob/sulfur_cube/regular_push3",
+            "sounds/mob/sulfur_cube/regular_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.slow_bouncy.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/slowbouncy_hit1",
+            "sounds/mob/sulfur_cube/slowbouncy_hit2",
+            "sounds/mob/sulfur_cube/slowbouncy_hit3",
+            "sounds/mob/sulfur_cube/slowbouncy_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.slow_bouncy.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/slowbouncy_push1",
+            "sounds/mob/sulfur_cube/slowbouncy_push2",
+            "sounds/mob/sulfur_cube/slowbouncy_push3",
+            "sounds/mob/sulfur_cube/slowbouncy_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.slow_flat.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/slowflat_hit1",
+            "sounds/mob/sulfur_cube/slowflat_hit2",
+            "sounds/mob/sulfur_cube/slowflat_hit3",
+            "sounds/mob/sulfur_cube/slowflat_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.slow_flat.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/slowflat_push1",
+            "sounds/mob/sulfur_cube/slowflat_push2",
+            "sounds/mob/sulfur_cube/slowflat_push3",
+            "sounds/mob/sulfur_cube/slowflat_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.slow_sliding.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/slowsliding_hit1",
+            "sounds/mob/sulfur_cube/slowsliding_hit2",
+            "sounds/mob/sulfur_cube/slowsliding_hit3",
+            "sounds/mob/sulfur_cube/slowsliding_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.slow_sliding.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/slowsliding_push1",
+            "sounds/mob/sulfur_cube/slowsliding_push2",
+            "sounds/mob/sulfur_cube/slowsliding_push3",
+            "sounds/mob/sulfur_cube/slowsliding_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
+      "mob.sulfur_cube.small.death" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [ "sounds/mob/sulfur_cube/small/death" ],
+         "subtitle" : "subtitles.entity.sulfur_cube.death"
+      },
+      "mob.sulfur_cube.small.hurt" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/small/hit1",
+            "sounds/mob/sulfur_cube/small/hit2",
+            "sounds/mob/sulfur_cube/small/hit3",
+            "sounds/mob/sulfur_cube/small/hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hurt"
+      },
+      "mob.sulfur_cube.small.jump" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/small/jump1",
+            "sounds/mob/sulfur_cube/small/jump2",
+            "sounds/mob/sulfur_cube/small/jump3",
+            "sounds/mob/sulfur_cube/small/jump4",
+            "sounds/mob/sulfur_cube/small/jump5",
+            "sounds/mob/sulfur_cube/small/jump6",
+            "sounds/mob/sulfur_cube/small/jump7",
+            "sounds/mob/sulfur_cube/small/jump8",
+            "sounds/mob/sulfur_cube/small/jump9",
+            "sounds/mob/sulfur_cube/small/jump10",
+            "sounds/mob/sulfur_cube/small/jump11"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.squish"
+      },
+      "mob.sulfur_cube.small.landing" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/small/squish1",
+            "sounds/mob/sulfur_cube/small/squish2",
+            "sounds/mob/sulfur_cube/small/squish3",
+            "sounds/mob/sulfur_cube/small/squish4",
+            "sounds/mob/sulfur_cube/small/squish5",
+            "sounds/mob/sulfur_cube/small/squish6",
+            "sounds/mob/sulfur_cube/small/squish7",
+            "sounds/mob/sulfur_cube/small/squish8",
+            "sounds/mob/sulfur_cube/small/squish9",
+            "sounds/mob/sulfur_cube/small/squish10"
+         ]
+      },
+      "mob.sulfur_cube.sticky.hit" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/sticky_hit1",
+            "sounds/mob/sulfur_cube/sticky_hit2",
+            "sounds/mob/sulfur_cube/sticky_hit3",
+            "sounds/mob/sulfur_cube/sticky_hit4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.hit"
+      },
+      "mob.sulfur_cube.sticky.push" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "neutral",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            "sounds/mob/sulfur_cube/sticky_push1",
+            "sounds/mob/sulfur_cube/sticky_push2",
+            "sounds/mob/sulfur_cube/sticky_push3",
+            "sounds/mob/sulfur_cube/sticky_push4"
+         ],
+         "subtitle" : "subtitles.entity.sulfur_cube.push"
+      },
       "mob.tadpole.convert_to_frog" : {
          "category" : "neutral",
          "max_distance" : null,
@@ -21636,6 +22478,41 @@
                "name" : "sounds/music/game/os_piano",
                "stream" : true,
                "volume" : 0.40
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/ebb",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/home",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/memories",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/nightly",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/shores",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
@@ -21864,6 +22741,7 @@
          ]
       },
       "music.game.frozen_peaks" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -21872,57 +22750,66 @@
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/stand_tall",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/one_more_day",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 1
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/piano1",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/piano2",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/piano3",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal1",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal2",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal3",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal4",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/ebb",
                "stream" : true,
-               "weight" : 1
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "name" : "sounds/music/game/home",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "name" : "sounds/music/game/nightly",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
@@ -22051,6 +22938,7 @@
          ]
       },
       "music.game.lush_caves" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22058,46 +22946,38 @@
             {
                "name" : "sounds/music/game/an_ordinary_day",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/left_to_bloom",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 4
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/one_more_day",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/floating_dream",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/piano3",
-               "stream" : true,
-               "weight" : 2
+               "stream" : true
             },
             {
                "name" : "sounds/music/game/calm1",
-               "stream" : true,
-               "weight" : 2
+               "stream" : true
             },
             {
                "name" : "sounds/music/game/calm2",
-               "stream" : true,
-               "weight" : 2
+               "stream" : true
             },
             {
                "name" : "sounds/music/game/calm3",
-               "stream" : true,
-               "weight" : 2
+               "stream" : true
             },
             {
                "name" : "sounds/music/game/aerie",
@@ -22113,10 +22993,17 @@
                "name" : "sounds/music/game/labyrinthine",
                "stream" : true,
                "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/shores",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
       "music.game.meadow" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22132,32 +23019,33 @@
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/left_to_bloom",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 1
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal1",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal2",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal3",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal4",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/home",
                "stream" : true,
-               "weight" : 1
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
@@ -22232,6 +23120,7 @@
          ]
       },
       "music.game.snowy_slopes" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22240,40 +23129,40 @@
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/an_ordinary_day",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 1
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/stand_tall",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 1
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/one_more_day",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 1
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal1",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal2",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal3",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/nightly",
                "stream" : true,
-               "weight" : 1
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
@@ -22316,6 +23205,7 @@
          ]
       },
       "music.game.stony_peaks" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22324,61 +23214,59 @@
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/stand_tall",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/wending",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 1
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/piano1",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/piano2",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/piano3",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal1",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal2",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal3",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal4",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/nightly",
                "stream" : true,
-               "weight" : 1
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
       "music.game.swamp_music" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22394,6 +23282,12 @@
             {
                "name" : "sounds/music/game/labyrinthine",
                "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/shores",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
@@ -22676,87 +23570,104 @@
                "volume" : 0.30
             },
             {
-               "name" : "sounds/music/game/below_and_above",
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/ebb",
                "stream" : true,
-               "volume" : 0.30
+               "volume" : 0.40,
+               "weight" : 2
             },
             {
-               "name" : "sounds/music/game/broken_clocks",
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/home",
                "stream" : true,
-               "volume" : 0.30
+               "volume" : 0.40,
+               "weight" : 2
             },
             {
-               "name" : "sounds/music/game/fireflies",
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/memories",
                "stream" : true,
-               "volume" : 0.30
+               "volume" : 0.40,
+               "weight" : 2
             },
             {
-               "name" : "sounds/music/game/lilypad",
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/nightly",
                "stream" : true,
-               "volume" : 0.30
+               "volume" : 0.40,
+               "weight" : 2
             },
             {
-               "name" : "sounds/music/game/os_piano",
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/shores",
                "stream" : true,
-               "volume" : 0.30
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
       "music.overworld.bamboo_jungle" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
          "sounds" : [
             {
-               "name" : "music/game/bromeliad",
-               "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
-            },
-            {
-               "name" : "music/game/hal1",
-               "stream" : true
-            },
-            {
-               "name" : "music/game/hal2",
-               "stream" : true
-            },
-            {
-               "name" : "music/game/hal3",
-               "stream" : true
-            },
-            {
-               "name" : "music/game/hal4",
-               "stream" : true
-            },
-            {
-               "name" : "music/game/left_to_bloom",
+               "name" : "sounds/music/game/bromeliad",
                "stream" : true,
                "volume" : 0.40
             },
             {
-               "name" : "music/game/nuance1",
+               "name" : "sounds/music/game/hal1",
                "stream" : true
             },
             {
-               "name" : "music/game/nuance2",
+               "name" : "sounds/music/game/hal2",
                "stream" : true
             },
             {
-               "name" : "music/game/piano1",
+               "name" : "sounds/music/game/hal3",
                "stream" : true
             },
             {
-               "name" : "music/game/piano2",
+               "name" : "sounds/music/game/hal4",
                "stream" : true
             },
             {
-               "name" : "music/game/piano3",
+               "name" : "sounds/music/game/left_to_bloom",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/nuance1",
                "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/nuance2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/piano1",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/piano2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/piano3",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/home",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
       "music.overworld.cherry_grove" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22764,8 +23675,7 @@
             {
                "name" : "sounds/music/game/below_and_above",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/bromeliad",
@@ -22798,6 +23708,24 @@
                "name" : "sounds/music/game/left_to_bloom",
                "stream" : true,
                "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/home",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "name" : "sounds/music/game/memories",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "name" : "sounds/music/game/nightly",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
@@ -22818,6 +23746,7 @@
          ]
       },
       "music.overworld.desert" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22825,8 +23754,7 @@
             {
                "name" : "sounds/music/game/fireflies",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/crescent_dunes",
@@ -22861,10 +23789,17 @@
                "name" : "sounds/music/game/one_more_day",
                "stream" : true,
                "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/memories",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
       "music.overworld.dripstone_caves" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22873,72 +23808,74 @@
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/wending",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/infinite_amethyst",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 1
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/an_ordinary_day",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal1",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal4",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/nuance1",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/nuance2",
-               "stream" : true,
-               "weight" : 1
+               "stream" : true
             },
             {
                "name" : "sounds/music/game/deeper",
-               "stream" : true,
-               "volume" : 0.40
+               "stream" : true
             },
             {
                "name" : "sounds/music/game/eld_unknown",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/endless",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/pokopoko",
                "stream" : true,
-               "volume" : 0.80,
+               "volume" : 0.80
+            },
+            {
+               "name" : "sounds/music/game/ebb",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "name" : "sounds/music/game/shores",
+               "stream" : true,
+               "volume" : 0.40,
                "weight" : 2
             }
          ]
       },
       "music.overworld.flower_forest" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22956,8 +23893,7 @@
             {
                "name" : "sounds/music/game/featherfall",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/hal1",
@@ -22987,10 +23923,23 @@
             {
                "name" : "sounds/music/game/nuance2",
                "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/memories",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "name" : "sounds/music/game/shores",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
       "music.overworld.forest" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -22998,8 +23947,7 @@
             {
                "name" : "sounds/music/game/broken_clocks",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/bromeliad",
@@ -23100,10 +24048,23 @@
                "name" : "sounds/music/game/piano2",
                "stream" : true,
                "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/memories",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "name" : "sounds/music/game/shores",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
       "music.overworld.grove" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -23112,8 +24073,7 @@
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/lilypad",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "load_on_low_memory" : true,
@@ -23180,10 +24140,17 @@
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/nuance2",
                "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/shores",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
       "music.overworld.jagged_peaks" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -23258,74 +24225,92 @@
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/hal2",
                "stream" : true
-            }
-         ]
-      },
-      "music.overworld.jungle" : {
-         "category" : "music",
-         "max_distance" : null,
-         "min_distance" : null,
-         "sounds" : [
-            {
-               "name" : "sounds/music/game/bromeliad",
-               "stream" : true,
-               "volume" : 0.40,
-               "weight" : 3
             },
             {
-               "name" : "sounds/music/game/hal1",
-               "stream" : true
-            },
-            {
-               "name" : "sounds/music/game/hal2",
-               "stream" : true
-            },
-            {
-               "name" : "sounds/music/game/hal3",
-               "stream" : true
-            },
-            {
-               "name" : "sounds/music/game/hal4",
-               "stream" : true
-            },
-            {
-               "name" : "sounds/music/game/left_to_bloom",
-               "volume" : 0.40
-            },
-            {
-               "name" : "sounds/music/game/nuance1",
-               "stream" : true
-            },
-            {
-               "name" : "sounds/music/game/nuance2",
-               "stream" : true
-            },
-            {
-               "name" : "sounds/music/game/piano1",
-               "stream" : true
-            },
-            {
-               "name" : "sounds/music/game/piano2",
-               "stream" : true
-            },
-            {
-               "name" : "sounds/music/game/piano3",
-               "stream" : true
-            }
-         ]
-      },
-      "music.overworld.jungle_edge" : {
-         "category" : "music",
-         "max_distance" : null,
-         "min_distance" : null,
-         "sounds" : [
-            {
-               "name" : "sounds/music/game/bromeliad",
+               "name" : "sounds/music/game/ebb",
                "stream" : true,
                "volume" : 0.40,
                "weight" : 2
             },
             {
+               "name" : "sounds/music/game/nightly",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            }
+         ]
+      },
+      "music.overworld.jungle" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "music",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            {
+               "name" : "sounds/music/game/bromeliad",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/hal1",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/hal2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/hal3",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/hal4",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/left_to_bloom",
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/nuance1",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/nuance2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/piano1",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/piano2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/piano3",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/home",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            }
+         ]
+      },
+      "music.overworld.jungle_edge" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "music",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            {
+               "name" : "sounds/music/game/bromeliad",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
                "name" : "sounds/music/game/hal1",
                "stream" : true
             },
@@ -23365,6 +24350,12 @@
             {
                "name" : "sounds/music/game/piano3",
                "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/home",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
@@ -23444,6 +24435,7 @@
          ]
       },
       "music.overworld.mesa" : {
+         "__use_legacy_max_distance" : "true",
          "category" : "music",
          "max_distance" : null,
          "min_distance" : null,
@@ -23451,8 +24443,7 @@
             {
                "name" : "sounds/music/game/crescent_dunes",
                "stream" : true,
-               "volume" : 0.40,
-               "weight" : 2
+               "volume" : 0.40
             },
             {
                "name" : "sounds/music/game/echo_in_the_wind",
@@ -23504,6 +24495,109 @@
             {
                "name" : "sounds/music/game/piano3",
                "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/memories",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            }
+         ]
+      },
+      "music.overworld.old_growth_taiga" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "music",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            {
+               "name" : "sounds/music/game/calm2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/comforting_memories",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/hal4",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/piano1",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/floating_dream",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/hal3",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/nuance1",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/left_to_bloom",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/hal2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/piano3",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/calm1",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/one_more_day",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/nuance2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/hal1",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/aerie",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/firebugs",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/labyrinthine",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/calm3",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/piano2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/shores",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
@@ -23631,6 +24725,82 @@
                "name" : "sounds/music/game/hal4",
                "stream" : true,
                "weight" : 1
+            }
+         ]
+      },
+      "music.overworld.sulfur_caves" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "music",
+         "max_distance" : null,
+         "min_distance" : null,
+         "sounds" : [
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/wending",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/infinite_amethyst",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/an_ordinary_day",
+               "stream" : true
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/hal1",
+               "stream" : true
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/hal4",
+               "stream" : true
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/nuance1",
+               "stream" : true
+            },
+            {
+               "load_on_low_memory" : true,
+               "name" : "sounds/music/game/nuance2",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/deeper",
+               "stream" : true
+            },
+            {
+               "name" : "sounds/music/game/eld_unknown",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/endless",
+               "stream" : true,
+               "volume" : 0.40
+            },
+            {
+               "name" : "sounds/music/game/pokopoko",
+               "stream" : true,
+               "volume" : 0.80
+            },
+            {
+               "name" : "sounds/music/game/ebb",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
+            },
+            {
+               "name" : "sounds/music/game/shores",
+               "stream" : true,
+               "volume" : 0.40,
+               "weight" : 2
             }
          ]
       },
@@ -26343,6 +27513,19 @@
             {
                "load_on_low_memory" : true,
                "name" : "sounds/music/game/records/blocks",
+               "stream" : true,
+               "volume" : 0.50
+            }
+         ]
+      },
+      "record.bounce" : {
+         "__use_legacy_max_distance" : "true",
+         "category" : "record",
+         "max_distance" : 64.0,
+         "min_distance" : null,
+         "sounds" : [
+            {
+               "name" : "sounds/music/game/records/bounce",
                "stream" : true,
                "volume" : 0.50
             }
