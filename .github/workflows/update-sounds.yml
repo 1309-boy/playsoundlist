@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: "0 */12 * * *"   # 12시간마다 자동 업데이트 (원하면 수정 가능)
 
+permissions:
+  contents: write
+
 jobs:
   update-sounds:
     runs-on: ubuntu-latest
@@ -13,76 +16,96 @@ jobs:
     # ----------------------------------------------------
     # 1. GitHub repo 체크아웃
     # ----------------------------------------------------
-    - name: Checkout Repo
-      uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-    # ----------------------------------------------------
-    # 2. Mojang sample pack 다운로드
-    # ----------------------------------------------------
-    - name: Download Mojang Bedrock Samples
+    - name: Fetch Mojang Bedrock samples
+      shell: bash
       run: |
-        curl -L -o samples.zip "https://github.com/Mojang/bedrock-samples/archive/refs/heads/main.zip"
-        unzip -o samples.zip -d samples_unzip
-        mv samples_unzip/bedrock-samples-main/resource_pack RP
+        set -euo pipefail
+        git clone --depth=1 https://github.com/Mojang/bedrock-samples.git bedrock-samples
+        cp bedrock-samples/resource_pack/sounds/sound_definitions.json sound_definitions.json
+        find bedrock-samples/resource_pack/sounds -type f -name '*.fsb' | head
 
-    # ----------------------------------------------------
-    # 3. FSB 파일 추출
-    # ----------------------------------------------------
-    - name: Extract FSB Files
+    - name: Install vgmstream
+      shell: bash
       run: |
-        mkdir -p fsb
-        find RP -name "*.fsb" -exec cp {} fsb/ \;
+        set -euo pipefail
+        sudo apt-get update
+        sudo apt-get install -y jq unzip
 
-    # ----------------------------------------------------
-    # 4. ffmpeg 설치 (FSB → WAV 변환 용도)
-    # ----------------------------------------------------
-    - name: Install ffmpeg
-      run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        release_api="https://api.github.com/repos/vgmstream/vgmstream/releases/latest"
+        download_url=$(curl -fsSL "$release_api" | jq -r '.assets[] | select(.name == "vgmstream-linux.zip") | .browser_download_url')
+        [ -n "$download_url" ] && [ "$download_url" != "null" ] || {
+          echo "Could not find the vgmstream Linux release." >&2
+          exit 1
+        }
 
-    # ----------------------------------------------------
-    # 5. 모든 FSB → WAV 변환 후 sounds_flat에 넣기
-    # ----------------------------------------------------
-    - name: Convert FSB to WAV
+        curl -fsSL "$download_url" -o vgmstream.zip
+        unzip -q vgmstream.zip -d vgmstream
+        vgmstream_cli=$(find "$PWD/vgmstream" -type f -name vgmstream-cli -print -quit)
+        [ -n "$vgmstream_cli" ] || {
+          echo "vgmstream-cli was not included in the release." >&2
+          exit 1
+        }
+        chmod +x "$vgmstream_cli"
+        ln -s "$vgmstream_cli" "$PWD/vgmstream-cli"
+        ./vgmstream-cli -h >/dev/null
+
+    - name: Convert FSB files to WAV
+      shell: bash
       run: |
+        set -euo pipefail
+        source_root="bedrock-samples/resource_pack/sounds"
+        rm -rf sounds_flat
         mkdir -p sounds_flat
-        for file in fsb/*.fsb; do
-          base=$(basename "$file" .fsb)
-          ffmpeg -v error -y -i "$file" "sounds_flat/${base}.wav" || true
-        done
 
-    # ----------------------------------------------------
-    # 6. sound_definitions.json 복사
-    # ----------------------------------------------------
-    - name: Copy sound_definitions.json
-      run: |
-        cp RP/sounds/sound_definitions.json sound_definitions.json
+        total=0
+        converted=0
+        failed=0
 
-    # ----------------------------------------------------
-    # 7. manifest.json 자동 생성
-    # ----------------------------------------------------
-    - name: Generate manifest.json
+        while IFS= read -r -d '' source; do
+          relative="${source#${source_root}/}"
+          output="sounds_flat/${relative%.fsb}.wav"
+          mkdir -p "$(dirname "$output")"
+
+          if ./vgmstream-cli -o "$output" "$source" >/dev/null 2>&1 && [ -s "$output" ]; then
+            converted=$((converted + 1))
+          else
+            rm -f "$output"
+            failed=$((failed + 1))
+            echo "Failed to convert: $relative" >&2
+          fi
+          total=$((total + 1))
+        done < <(find "$source_root" -type f -name '*.fsb' -print0)
+
+        echo "Converted $converted of $total FSB files; $failed failed."
+        [ "$total" -gt 0 ] || { echo "No FSB files found." >&2; exit 1; }
+        [ "$converted" -gt 0 ] || { echo "No WAV files were created." >&2; exit 1; }
+        [ "$failed" -eq 0 ] || { echo "FSB conversion was incomplete." >&2; exit 1; }
+
+    - name: Generate site manifest
+      shell: bash
       run: |
-        echo "[" > manifest.json
-        find sounds_flat -type f -name "*.wav" | sed 's|^|  "|;s|$|"|' | sed '$!s/$/,/' >> manifest.json
-        echo "]" >> manifest.json
+        set -euo pipefail
+        find sounds_flat -type f -name '*.wav' -print | LC_ALL=C sort | \
+          sed 's|^|  "|;s|$|"|' | \
+          awk 'BEGIN { print "[" } { print (NR == 1 ? "" : ",") $0 } END { print "]" }' \
+          > manifest.json
 
     # ----------------------------------------------------
     # 8. 변경사항 커밋 + Push
     # ----------------------------------------------------
-    - name: Commit and Push changes
+    - name: Commit generated files
+      shell: bash
       run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
+        set -euo pipefail
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add manifest.json sound_definitions.json sounds_flat/
-        git commit -m "Auto-update sounds from Mojang samples" || echo "No changes to commit"
-        git push
-
-    # ----------------------------------------------------
-    # 9. Firebase Hosting 자동 배포
-    # ----------------------------------------------------
-    - name: Deploy to Firebase Hosting
-      uses: FirebaseExtended/action-hosting-deploy@v0
-      with:
-        repoToken: "${{ secrets.GITHUB_TOKEN }}"
-        firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_PLAYSOUNDLIST }}"
-        channelId: live
+        if git diff --cached --quiet; then
+          echo "Mojang samples have not changed."
+        else
+          git commit -m "Auto-update sounds from Mojang samples"
+          git push
+        fi
