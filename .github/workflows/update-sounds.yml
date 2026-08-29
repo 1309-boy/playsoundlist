@@ -50,7 +50,12 @@ jobs:
         }
         chmod +x "$vgmstream_cli"
         ln -s "$vgmstream_cli" "$PWD/vgmstream-cli"
-        ./vgmstream-cli -h >/dev/null
+        sample_fsb=$(find "$PWD/bedrock-samples/resource_pack/sounds" -type f -name '*.fsb' -print -quit)
+        [ -n "$sample_fsb" ] || {
+          echo "No FSB file is available to verify vgmstream." >&2
+          exit 1
+        }
+        ./vgmstream-cli -m "$sample_fsb" >/dev/null
 
     - name: Convert FSB files to WAV
       shell: bash
