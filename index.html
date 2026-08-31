@@ -54,11 +54,16 @@
     .btn.play.playing{background:var(--accent);border-color:var(--accent);color:#000}
     .btn.disabled{background:#444!important;border-color:#333!important;color:#999!important;cursor:not-allowed!important;}
     .list{display:flex;flex-direction:column;gap:12px;margin-bottom:40px}
-    .card{background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+    .card{--progress-angle:0deg;position:relative;isolation:isolate;background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+    .card::before{content:"";position:absolute;z-index:0;inset:-1px;border-radius:14px;padding:2px;pointer-events:none;opacity:0;background:conic-gradient(from 0deg,var(--accent) 0deg,var(--accent) var(--progress-angle),transparent var(--progress-angle),transparent 360deg);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;transition:opacity .15s ease}
+    .card.playing::before{opacity:1}
+    .card>*{position:relative;z-index:1}
     .title{font-weight:700;margin-bottom:8px;word-break:break-word;display:flex;justify-content:space-between;align-items:center}
     .dist-label{font-size:0.9rem;color:#ccc;margin-left:10px}
     .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
     .label{color:var(--muted)}
+    .playback-time{margin-left:auto;color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .card.playing .playback-time{color:#86efac}
     input[type="range"]{width:240px}
   </style>
 </head>
@@ -110,6 +115,11 @@ let currentPlayBtn = null;
 let webCtx = null;
 let audioUnlocked = false;
 let currentSrcNode = null;
+let currentBufferDuration = 0;
+let currentBufferPosition = 0;
+let currentPlaybackRate = 1;
+let playbackAnchorTime = 0;
+let progressFrame = 0;
 const bufferCache = new Map();
 
 /* ================= DOM ================== */
@@ -174,6 +184,7 @@ function render(){
       <div class="row">
         <button class="btn play ${missingAudio ? "disabled" : ""}">${missingAudio ? "🚫" : "Play"}</button>
         <button class="btn stop">Stop</button>
+        <span class="playback-time">--:--</span>
       </div>
 
       <div class="row">
@@ -212,7 +223,7 @@ document.addEventListener('input',(e)=>{
   card.querySelector('.pitch-val').textContent = e.target.value;
 
   if (currentSrcNode && currentKey === key){
-    currentSrcNode.playbackRate.value = parseFloat(e.target.value || '1.0');
+    setCurrentPlaybackRate(parseFloat(e.target.value || '1.0'));
   }
 });
 
@@ -265,15 +276,83 @@ async function getBuffer(url){
   return buf;
 }
 
-function stopCurrent(){
-  if (currentSrcNode){
-    currentSrcNode.stop(0);
-    currentSrcNode.disconnect?.();
+function formatTime(seconds){
+  if (!Number.isFinite(seconds) || seconds < 0) return '--:--';
+  const total = Math.ceil(seconds);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2,'0')}:${String(secs).padStart(2,'0')}`
+    : `${minutes}:${String(secs).padStart(2,'0')}`;
+}
+
+function getCurrentBufferPosition(){
+  if (!webCtx || !currentSrcNode) return currentBufferPosition;
+  const advanced = Math.max(0, webCtx.currentTime - playbackAnchorTime) * currentPlaybackRate;
+  return Math.min(currentBufferDuration, currentBufferPosition + advanced);
+}
+
+function setCurrentPlaybackRate(rate){
+  if (!currentSrcNode || !webCtx) return;
+  currentBufferPosition = getCurrentBufferPosition();
+  playbackAnchorTime = webCtx.currentTime;
+  currentPlaybackRate = Math.max(0.01, rate || 1);
+  currentSrcNode.playbackRate.setValueAtTime(currentPlaybackRate, webCtx.currentTime);
+}
+
+function resetCardProgress(key){
+  if (!key) return;
+  const card = document.querySelector(`.card[data-key="${CSS.escape(key)}"]`);
+  if (!card) return;
+  card.classList.remove('playing');
+  card.style.setProperty('--progress-angle','0deg');
+  card.querySelector('.btn.play')?.classList.remove('playing');
+  const time = card.querySelector('.playback-time');
+  if (time) time.textContent = '--:--';
+}
+
+function updatePlaybackProgress(){
+  if (!currentSrcNode || !currentKey || currentBufferDuration <= 0) return;
+
+  const position = getCurrentBufferPosition();
+  const progress = Math.min(1, position / currentBufferDuration);
+  const remaining = Math.max(0, currentBufferDuration - position) / currentPlaybackRate;
+  const total = currentBufferDuration / currentPlaybackRate;
+  const card = document.querySelector(`.card[data-key="${CSS.escape(currentKey)}"]`);
+
+  if (card){
+    card.classList.add('playing');
+    card.style.setProperty('--progress-angle',`${progress * 360}deg`);
+    const playBtn = card.querySelector('.btn.play');
+    playBtn?.classList.add('playing');
+    if (playBtn) currentPlayBtn = playBtn;
+    const time = card.querySelector('.playback-time');
+    if (time) time.textContent = `${formatTime(remaining)} left · ${formatTime(total)} total`;
   }
-  if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
+
+  progressFrame = requestAnimationFrame(updatePlaybackProgress);
+}
+
+function stopCurrent(){
+  const stoppedKey = currentKey;
+  const stoppedSource = currentSrcNode;
+  if (progressFrame) cancelAnimationFrame(progressFrame);
+  progressFrame = 0;
   currentSrcNode = null;
   currentKey = null;
+  if (stoppedSource){
+    stoppedSource.onended = null;
+    try{ stoppedSource.stop(0); }catch(_){}
+    stoppedSource.disconnect?.();
+  }
+  if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
   currentPlayBtn = null;
+  currentBufferDuration = 0;
+  currentBufferPosition = 0;
+  currentPlaybackRate = 1;
+  playbackAnchorTime = 0;
+  resetCardProgress(stoppedKey);
 }
 
 /* ================= PLAY ================== */
@@ -312,10 +391,16 @@ async function playKey(key, btn){
     currentSrcNode = src;
     currentKey = key;
     currentPlayBtn = btn;
+    currentBufferDuration = buf.duration;
+    currentBufferPosition = 0;
+    currentPlaybackRate = rate;
+    playbackAnchorTime = webCtx.currentTime;
     btn.classList.add('playing');
+    card.classList.add('playing');
 
     src.onended = ()=> stopCurrent();
     src.start(0);
+    updatePlaybackProgress();
   }catch(err){
     stopCurrent();
   }
