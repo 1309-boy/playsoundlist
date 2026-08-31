@@ -107,16 +107,17 @@ const state = {
   pageSize: 100,
 };
 
-const playIndex = {};
 let currentKey   = null;
 let currentPlayBtn = null;
 
 let webCtx = null;
 let audioUnlocked = false;
 let currentSrcNode = null;
+let currentGainNode = null;
 let currentBufferDuration = 0;
 let currentBufferPosition = 0;
 let currentPlaybackRate = 1;
+let currentDefinitionPitch = 1;
 let playbackAnchorTime = 0;
 let progressFrame = 0;
 const bufferCache = new Map();
@@ -131,11 +132,72 @@ const $next   = document.getElementById('next');
 const $pagesize = document.getElementById('pagesize');
 
 /* ================= HELPERS ================== */
+function normalizeRange(value, fallback, minimum = 0){
+  if (value == null) return {min:fallback, max:fallback};
+  const raw = Array.isArray(value) ? value : [value];
+  const values = raw
+    .filter(v=>v != null && v !== '')
+    .map(Number)
+    .filter(Number.isFinite)
+    .map(v=>Math.max(minimum, v));
+
+  if (!values.length) return {min:fallback, max:fallback};
+  if (values.length === 1) return {min:values[0], max:values[0]};
+  return {
+    min: Math.min(values[0], values[1]),
+    max: Math.max(values[0], values[1])
+  };
+}
+
 function normalizeDefSound(s){
   if(!s) return null;
-  if(typeof s==='string') return {name:s};
-  if(s.name) return {name:s.name};
-  return null;
+  const sound = typeof s === 'string' ? {name:s} : s;
+  if(!sound.name) return null;
+
+  const weight = sound.weight == null ? 1 : Number(sound.weight);
+  return {
+    name: sound.name,
+    pitch: normalizeRange(sound.pitch, 1, 0.01),
+    volume: normalizeRange(sound.volume, 1, 0),
+    weight: Number.isFinite(weight) ? Math.max(0, weight) : 1
+  };
+}
+
+function sampleRange(range, random = Math.random){
+  if (!range || range.min === range.max) return range?.min ?? 1;
+  return range.min + ((range.max - range.min) * random());
+}
+
+function chooseWeightedVariant(variants, random = Math.random){
+  if (!variants.length) return null;
+
+  const totalWeight = variants.reduce((sum, variant)=>sum + variant.weight, 0);
+  if (totalWeight <= 0){
+    return variants[Math.min(variants.length - 1, Math.floor(random() * variants.length))];
+  }
+
+  let cursor = random() * totalWeight;
+  for (const variant of variants){
+    cursor -= variant.weight;
+    if (cursor < 0) return variant;
+  }
+  return variants[variants.length - 1];
+}
+
+function resolvePlaybackSettings(item, variant, commandPitch, random = Math.random){
+  const requestedPitch = Number.isFinite(commandPitch) ? commandPitch : 1;
+  const definitionPitch =
+    sampleRange(item.pitch, random) * sampleRange(variant.pitch, random);
+  const definitionVolume =
+    sampleRange(item.volume, random) * sampleRange(variant.volume, random);
+
+  return {
+    definitionPitch,
+    playbackRate: Math.min(256, Math.max(0.01, requestedPitch * definitionPitch)),
+    // Values above 1 mainly extend Minecraft's audible range. At the listener,
+    // limiting them avoids browser clipping while preserving quieter variants.
+    gain: Math.min(1, Math.max(0, definitionVolume))
+  };
 }
 
 function soundToBasePath(s){ return s.replace(/^sounds\//,''); }
@@ -329,7 +391,10 @@ function setCurrentPlaybackRate(rate){
   if (!currentSrcNode || !webCtx) return;
   currentBufferPosition = getCurrentBufferPosition();
   playbackAnchorTime = webCtx.currentTime;
-  currentPlaybackRate = Math.max(0.01, rate || 1);
+  currentPlaybackRate = Math.min(
+    256,
+    Math.max(0.01, (rate || 1) * currentDefinitionPitch)
+  );
   currentSrcNode.playbackRate.setValueAtTime(currentPlaybackRate, webCtx.currentTime);
 }
 
@@ -372,22 +437,19 @@ function stopCurrent(){
     try{ stoppedSource.stop(0); }catch(_){}
     stoppedSource.disconnect?.();
   }
+  currentGainNode?.disconnect?.();
+  currentGainNode = null;
   if (currentPlayBtn) currentPlayBtn.classList.remove('playing');
   currentPlayBtn = null;
   currentBufferDuration = 0;
   currentBufferPosition = 0;
   currentPlaybackRate = 1;
+  currentDefinitionPitch = 1;
   playbackAnchorTime = 0;
   resetCardProgress(stoppedKey);
 }
 
 /* ================= PLAY ================== */
-function nextUrlFor(item){
-  const idx = ((playIndex[item.name]||0) % item.files.length);
-  playIndex[item.name] = idx + 1;
-  return baseToUrl(item.files[idx]);
-}
-
 async function playKey(key, btn){
   const item = state.itemsByName.get(key);
   if (!item) return;
@@ -397,29 +459,35 @@ async function playKey(key, btn){
     return;
   }
 
-  const url = nextUrlFor(item);
-  if (!url || !inManifest(url)) return;
+  const variant = chooseWeightedVariant(item.variants);
+  if (!variant || !inManifest(variant.url)) return;
 
   await unlockAudio();
 
   stopCurrent();
 
   const card = document.querySelector(`.card[data-key="${CSS.escape(key)}"]`);
-  const rate = parseFloat(card.querySelector('.pitch').value || '1.0');
+  const commandPitch = parseFloat(card.querySelector('.pitch').value || '1.0');
+  const settings = resolvePlaybackSettings(item, variant, commandPitch);
 
   try{
-    const buf = await getBuffer(url);
+    const buf = await getBuffer(variant.url);
     const src = webCtx.createBufferSource();
+    const gain = webCtx.createGain();
     src.buffer = buf;
-    src.playbackRate.value = rate;
-    src.connect(webCtx.destination);
+    src.playbackRate.value = settings.playbackRate;
+    gain.gain.value = settings.gain;
+    src.connect(gain);
+    gain.connect(webCtx.destination);
 
     currentSrcNode = src;
+    currentGainNode = gain;
     currentKey = key;
     currentPlayBtn = btn;
     currentBufferDuration = buf.duration;
     currentBufferPosition = 0;
-    currentPlaybackRate = rate;
+    currentPlaybackRate = settings.playbackRate;
+    currentDefinitionPitch = settings.definitionPitch;
     playbackAnchorTime = webCtx.currentTime;
     btn.classList.add('playing');
     card.classList.add('playing');
@@ -467,14 +535,16 @@ async function loadDefinitions(){
   for (const [name, def] of Object.entries(defs)){
     if (!Array.isArray(def.sounds)) continue;
 
-    const files = def.sounds
+    const variants = def.sounds
       .map(normalizeDefSound)
       .filter(Boolean)
-      .map(s=>soundToBasePath(s.name))
-      .filter(Boolean)
-      .filter(base=>inManifest(baseToUrl(base)));
+      .map(sound=>{
+        const base = soundToBasePath(sound.name);
+        return {...sound, base, url:baseToUrl(base)};
+      })
+      .filter(variant=>variant.base && inManifest(variant.url));
 
-    const missing = files.length === 0;
+    const missing = variants.length === 0;
 
     const maxDist =
       typeof def.max_distance === "number"
@@ -483,7 +553,9 @@ async function loadDefinitions(){
 
     const item = {
       name,
-      files,
+      variants,
+      pitch: normalizeRange(def.pitch, 1, 0.01),
+      volume: normalizeRange(def.volume, 1, 0),
       files_missing: missing,
       max_distance: maxDist
     };
