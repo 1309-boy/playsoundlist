@@ -54,16 +54,15 @@
     .btn.play.playing{background:var(--accent);border-color:var(--accent);color:#000}
     .btn.disabled{background:#444!important;border-color:#333!important;color:#999!important;cursor:not-allowed!important;}
     .list{display:flex;flex-direction:column;gap:12px;margin-bottom:40px}
-    .card{--progress-angle:0deg;position:relative;isolation:isolate;background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-    .card::before{content:"";position:absolute;z-index:0;inset:-1px;border-radius:14px;padding:2px;pointer-events:none;opacity:0;background:conic-gradient(from 0deg,var(--accent) 0deg,var(--accent) var(--progress-angle),transparent var(--progress-angle),transparent 360deg);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;transition:opacity .15s ease}
-    .card.playing::before{opacity:1}
+    .card{--progress-offset:1;position:relative;isolation:isolate;background:#1a1a1a;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
     .card>*{position:relative;z-index:1}
+    .card>.progress-border{position:absolute;z-index:0;left:-1px;top:-1px;width:calc(100% + 2px);height:calc(100% + 2px);pointer-events:none;overflow:visible;opacity:0;transition:opacity .15s ease}
+    .progress-border path{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 1;stroke-dashoffset:var(--progress-offset)}
+    .card.playing>.progress-border{opacity:1}
     .title{font-weight:700;margin-bottom:8px;word-break:break-word;display:flex;justify-content:space-between;align-items:center}
     .dist-label{font-size:0.9rem;color:#ccc;margin-left:10px}
     .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
     .label{color:var(--muted)}
-    .playback-time{margin-left:auto;color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;white-space:nowrap}
-    .card.playing .playback-time{color:#86efac}
     input[type="range"]{width:240px}
   </style>
 </head>
@@ -150,6 +149,44 @@ function inManifest(url){
   return state.manifestSet.has(onlyPath);
 }
 
+function updateCardProgressPath(card){
+  const svg = card.querySelector('.progress-border');
+  const path = svg?.querySelector('path');
+  if (!svg || !path) return;
+
+  const bounds = svg.getBoundingClientRect();
+  const width = bounds.width;
+  const height = bounds.height;
+  if (width <= 4 || height <= 4) return;
+
+  const inset = 1;
+  const left = inset;
+  const top = inset;
+  const right = width - inset;
+  const bottom = height - inset;
+  const radius = Math.min(13, (right - left) / 2, (bottom - top) / 2);
+  const startX = width / 2;
+
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  path.setAttribute('d', [
+    `M ${startX} ${top}`,
+    `H ${right - radius}`,
+    `A ${radius} ${radius} 0 0 1 ${right} ${top + radius}`,
+    `V ${bottom - radius}`,
+    `A ${radius} ${radius} 0 0 1 ${right - radius} ${bottom}`,
+    `H ${left + radius}`,
+    `A ${radius} ${radius} 0 0 1 ${left} ${bottom - radius}`,
+    `V ${top + radius}`,
+    `A ${radius} ${radius} 0 0 1 ${left + radius} ${top}`,
+    `H ${startX}`,
+    'Z'
+  ].join(' '));
+}
+
+const progressResizeObserver = new ResizeObserver(entries => {
+  for (const entry of entries) updateCardProgressPath(entry.target);
+});
+
 /* ================= RENDER ================== */
 function fmtPage(){
   const total = state.filtered.length;
@@ -159,6 +196,7 @@ function fmtPage(){
 }
 
 function render(){
+  progressResizeObserver.disconnect();
   $list.innerHTML = '';
   const start = state.page * state.pageSize;
   const end   = Math.min(start + state.pageSize, state.filtered.length);
@@ -176,6 +214,10 @@ function render(){
     const missingAudio = item.files_missing ? true : false;
 
     card.innerHTML = `
+      <svg class="progress-border" aria-hidden="true">
+        <path pathLength="1"></path>
+      </svg>
+
       <div class="title">
         <span>${item.name}</span>
         ${distHTML}
@@ -184,7 +226,6 @@ function render(){
       <div class="row">
         <button class="btn play ${missingAudio ? "disabled" : ""}">${missingAudio ? "🚫" : "Play"}</button>
         <button class="btn stop">Stop</button>
-        <span class="playback-time">--:--</span>
       </div>
 
       <div class="row">
@@ -195,6 +236,8 @@ function render(){
     `;
 
     $list.appendChild(card);
+    updateCardProgressPath(card);
+    progressResizeObserver.observe(card);
   }
 
   $count.textContent = `Showing ${start+1}-${end} of ${state.filtered.length} sounds`;
@@ -276,17 +319,6 @@ async function getBuffer(url){
   return buf;
 }
 
-function formatTime(seconds){
-  if (!Number.isFinite(seconds) || seconds < 0) return '--:--';
-  const total = Math.ceil(seconds);
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const secs = total % 60;
-  return hours > 0
-    ? `${hours}:${String(minutes).padStart(2,'0')}:${String(secs).padStart(2,'0')}`
-    : `${minutes}:${String(secs).padStart(2,'0')}`;
-}
-
 function getCurrentBufferPosition(){
   if (!webCtx || !currentSrcNode) return currentBufferPosition;
   const advanced = Math.max(0, webCtx.currentTime - playbackAnchorTime) * currentPlaybackRate;
@@ -306,10 +338,8 @@ function resetCardProgress(key){
   const card = document.querySelector(`.card[data-key="${CSS.escape(key)}"]`);
   if (!card) return;
   card.classList.remove('playing');
-  card.style.setProperty('--progress-angle','0deg');
+  card.style.setProperty('--progress-offset','1');
   card.querySelector('.btn.play')?.classList.remove('playing');
-  const time = card.querySelector('.playback-time');
-  if (time) time.textContent = '--:--';
 }
 
 function updatePlaybackProgress(){
@@ -317,18 +347,14 @@ function updatePlaybackProgress(){
 
   const position = getCurrentBufferPosition();
   const progress = Math.min(1, position / currentBufferDuration);
-  const remaining = Math.max(0, currentBufferDuration - position) / currentPlaybackRate;
-  const total = currentBufferDuration / currentPlaybackRate;
   const card = document.querySelector(`.card[data-key="${CSS.escape(currentKey)}"]`);
 
   if (card){
     card.classList.add('playing');
-    card.style.setProperty('--progress-angle',`${progress * 360}deg`);
+    card.style.setProperty('--progress-offset',String(1 - progress));
     const playBtn = card.querySelector('.btn.play');
     playBtn?.classList.add('playing');
     if (playBtn) currentPlayBtn = playBtn;
-    const time = card.querySelector('.playback-time');
-    if (time) time.textContent = `${formatTime(remaining)} left · ${formatTime(total)} total`;
   }
 
   progressFrame = requestAnimationFrame(updatePlaybackProgress);
